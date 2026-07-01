@@ -1,38 +1,25 @@
-# Mallory → TypeScript port progress
+# Mallory → TypeScript port — COMPLETE
 
-Porting `johnhenry/mallory` (ActionScript 3, ~11.4k LOC) to modern TypeScript with
-`node:test`. Tests are written **before** each module is translated. Bugs are fixed
-in translation, not carried over.
+Ported `johnhenry/mallory` (ActionScript 3, ~11.4k LOC, 23 classes) to modern,
+fully-typed TypeScript with `node:test`. Tests written **before** each module;
+bugs fixed rather than carried over.
 
-## Dependency order (leaves first)
+## Status: all 23 modules ported ✅ — 196 tests passing, typecheck + build clean
 
-1. **Foundation (no internal deps):** Vector, ComplexNumber, Utilities, Type,
-   IntUtils, Logic, Calculus, SpecialOperator, StringVarMath, Enviornment
-2. **Layer 1:** VectorUtils (Vector), Structure (Vector, VectorUtils)
-3. **Core numeric cluster:** ComplexMath, RealMath (both ↔ ComplexNumber/Vector/Type)
-4. **Combinatorics cluster:** Permutation ↔ Cycle ↔ IntegerMath
-5. Polynomial (Vector), Polygon (ComplexMath, RealMath, ...)
-6. **Expression stack:** Expression, StringEvaluator (+ Enviornment, SpecialOperator)
-7. **Graphing:** GraphUtils, Graph3DUtils — Flash rendering re-shaped to emit geometry
+| Layer | Modules |
+|-------|---------|
+| Foundations | Vector, ComplexNumber, Type |
+| Leaves | Utilities, Logic, IntUtils, StringVarMath, SpecialOperator, Calculus |
+| Linear algebra | VectorUtils |
+| Numeric cores | RealMath (98 fns), ComplexMath (126 fns) |
+| Combinatorics | IntegerMath, Cycle, Permutation, Polynomial |
+| Structures & geometry | Structure, Polygon |
+| Expression stack | Environment, Expression, StringEvaluator |
+| Graphing | GraphUtils, Graph3DUtils (re-targeted to emit geometry data) |
 
-## Status
+See README.md for the catalogue of ~40 bugs found and fixed during translation.
 
-| Module | Tests | Ported | Notes |
-|---|---|---|---|
-| Vector | ✅ | ✅ | Fixed `setElement` infinite recursion; x/y/z/t keep stored 0 |
-| ComplexNumber | ✅ | ✅ | Fixed `parse` null-match crash & negative-imag round-trip |
-| Utilities | | | AS3 body fully commented out — reviving useful helpers |
-| Type | | | |
-| ... | | | |
-
-## Bugs found & fixed
-- `Vector.setElement` infinitely recursed on falsy slots → now pads & assigns.
-- `Vector` x/y/z/t accessors coerced stored `0` to missing → now return real value.
-- `ComplexNumber.fromString` crashed when `String.match` returned `null`, and
-  emitted `a+-b*i` for negative imaginary parts (couldn't round-trip) → rewritten `parse`.
-
-## Update: core numeric layer complete
-Ported & tested: Vector, ComplexNumber, Utilities, Type, IntUtils, Logic, Calculus,
-SpecialOperator, StringVarMath, VectorUtils, RealMath (98 fns), ComplexMath (126 fns).
-133 tests passing. Remaining: Structure, Permutation, Cycle, IntegerMath, Polynomial,
-Polygon, Enviornment, Expression, StringEvaluator, GraphUtils, Graph3DUtils.
+## Toolchain
+- Node ≥ 22.6 runs the `.ts` test suite directly (native type stripping).
+- `tsconfig` uses `rewriteRelativeImportExtensions` so `.ts` imports emit as `.js`.
+- `npm test` / `npm run build` / `npm run typecheck`.
