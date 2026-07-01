@@ -19,6 +19,9 @@ export { DualNumber } from "./DualNumber.ts";
 // Expression evaluation
 export { Environment } from "./Environment.ts";
 export { Expression } from "./Expression.ts";
+export { FFT } from "./FFT.ts";
+export { Geometry, type Point, Transform2D } from "./Geometry.ts";
+export { type Edge, Graph } from "./Graph.ts";
 export {
   type Face,
   Graph3DUtils,
