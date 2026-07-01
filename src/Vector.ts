@@ -50,6 +50,40 @@ export class Vector<T = unknown> extends Array<T> {
     return v;
   }
 
+  /**
+   * Parse the `<vector>` form produced by {@link toXML} (best-effort inverse:
+   * numeric coordinates become numbers, everything else stays a string).
+   */
+  static fromXML(xml: string): Vector<number | string> {
+    const out = new Vector<number | string>();
+    const re = /<coordinate>(.*?)<\/coordinate>/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(xml)) !== null) {
+      const raw = m[1] as string;
+      const n = Number(raw);
+      out.push(raw !== "" && !Number.isNaN(n) ? n : raw);
+    }
+    return out;
+  }
+
+  /**
+   * Parse the bracketed form produced by {@link toString} (best-effort inverse:
+   * numeric elements become numbers, everything else stays a trimmed string).
+   */
+  static fromString(str: string, seperator = ",", leftBracket = "[", rightBracket = "]"): Vector<number | string> {
+    let s = str.trim();
+    if (s.startsWith(leftBracket)) s = s.slice(leftBracket.length);
+    if (s.endsWith(rightBracket)) s = s.slice(0, s.length - rightBracket.length);
+    const out = new Vector<number | string>();
+    if (s === "") return out;
+    for (const part of s.split(seperator)) {
+      const t = part.trim();
+      const n = Number(t);
+      out.push(t !== "" && !Number.isNaN(n) ? n : t);
+    }
+    return out;
+  }
+
   /** String representation, e.g. `[1,2,3]`. */
   override toString(seperator = ",", leftBracket = "[", rightBracket = "]"): string {
     let out = leftBracket;

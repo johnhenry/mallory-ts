@@ -113,6 +113,92 @@ export class Polygon extends Vector<Point> {
     return Math.acos((ab * ab + bc * bc - ac * ac) / (2 * ab * bc));
   }
 
+  /** True when `point` lies inside the polygon (even-odd ray-casting rule). */
+  contains(point: Point): boolean {
+    const px = point.x as number;
+    const py = point.y as number;
+    let inside = false;
+    const n = this.vertexCount;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const vi = this.vertex(i);
+      const vj = this.vertex(j);
+      const xi = vi.x as number;
+      const yi = vi.y as number;
+      const xj = vj.x as number;
+      const yj = vj.y as number;
+      if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  /** True when the polygon is convex (all turns share the same orientation). */
+  isConvex(): boolean {
+    const n = this.vertexCount;
+    if (n < 3) return false;
+    let sign = 0;
+    for (let i = 0; i < n; i++) {
+      const a = this.vertex(i);
+      const b = this.vertex(i + 1);
+      const c = this.vertex(i + 2);
+      const cross =
+        ((b.x as number) - (a.x as number)) * ((c.y as number) - (b.y as number)) -
+        ((b.y as number) - (a.y as number)) * ((c.x as number) - (b.x as number));
+      if (cross !== 0) {
+        const s = Math.sign(cross);
+        if (sign === 0) sign = s;
+        else if (s !== sign) return false;
+      }
+    }
+    return true;
+  }
+
+  /** True when no two non-adjacent edges cross (the polygon is simple). */
+  isSimple(): boolean {
+    const n = this.vertexCount;
+    if (n < 3) return false;
+    for (let i = 0; i < n; i++) {
+      const a1 = this.vertex(i);
+      const a2 = this.vertex(i + 1);
+      for (let j = i + 1; j < n; j++) {
+        // Skip edges that share a vertex (adjacent, or the wrap-around pair).
+        if (j === i || j === i + 1 || (i === 0 && j === n - 1)) continue;
+        const b1 = this.vertex(j);
+        const b2 = this.vertex(j + 1);
+        if (Polygon.segmentsIntersect(a1, a2, b1, b2)) return false;
+      }
+    }
+    return true;
+  }
+
+  private static orient(a: Point, b: Point, c: Point): number {
+    return (
+      ((b.x as number) - (a.x as number)) * ((c.y as number) - (a.y as number)) -
+      ((b.y as number) - (a.y as number)) * ((c.x as number) - (a.x as number))
+    );
+  }
+
+  private static onSegment(a: Point, b: Point, p: Point): boolean {
+    return (
+      Math.min(a.x as number, b.x as number) <= (p.x as number) &&
+      (p.x as number) <= Math.max(a.x as number, b.x as number) &&
+      Math.min(a.y as number, b.y as number) <= (p.y as number) &&
+      (p.y as number) <= Math.max(a.y as number, b.y as number)
+    );
+  }
+
+  private static segmentsIntersect(p1: Point, p2: Point, p3: Point, p4: Point): boolean {
+    const d1 = Polygon.orient(p3, p4, p1);
+    const d2 = Polygon.orient(p3, p4, p2);
+    const d3 = Polygon.orient(p1, p2, p3);
+    const d4 = Polygon.orient(p1, p2, p4);
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+    if (d1 === 0 && Polygon.onSegment(p3, p4, p1)) return true;
+    if (d2 === 0 && Polygon.onSegment(p3, p4, p2)) return true;
+    if (d3 === 0 && Polygon.onSegment(p1, p2, p3)) return true;
+    if (d4 === 0 && Polygon.onSegment(p1, p2, p4)) return true;
+    return false;
+  }
+
   /** A clone of the polygon (deep-clones nested vertex vectors by default). */
   override clone(deep = true): Polygon {
     const out = new Polygon(this.length);

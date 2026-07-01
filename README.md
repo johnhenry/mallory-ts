@@ -85,6 +85,28 @@ explicit note rather than "fixed" by guesswork. The Flash rendering utilities
 (`GraphUtils`/`Graph3DUtils`) now return renderer-agnostic geometry (2D paths,
 3D meshes) instead of Flash display objects.
 
+## Beyond the original
+
+A completeness pass added the missing counterparts and a few natural supplements
+the AS3 library never had:
+
+- **`ComplexNumber`**: `fromPolar`, `fromVector`, `fromXML` (inverses of
+  `magnitude`/`angle`, `toVector`, `toXML`).
+- **`Vector`**: `fromXML`, `fromString` (best-effort inverses of `toXML`/`toString`).
+- **`Polynomial`**: `evaluate` (Horner), `add`/`subtract`, `divide`/`mod`/`divmod`
+  (long division), and `parse` (inverse of `toPolyString`).
+- **`Polygon`**: `centroid`, `contains` (point-in-polygon), `isConvex`, `isSimple`.
+- **`RealMath`/`ComplexMath`**: `populationVariance` / `populationStandardDeviation`
+  alongside the sample versions.
+- **`Structure` presets**: `Structure.realField()`, `complexField()`,
+  `integersModulo(n)` (a field when `n` is prime), and `booleanRing()` — so you
+  can do linear algebra over these without wiring up operations by hand:
+
+  ```ts
+  const gf7 = Structure.integersModulo(7);
+  gf7.invertMatrix(/* a matrix over GF(7) */); // Gauss-Jordan over the finite field
+  ```
+
 ## License
 
 MIT

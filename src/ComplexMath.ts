@@ -798,6 +798,19 @@ export class ComplexMath {
     return ComplexMath.squareRoot(ComplexMath.variance(list));
   }
 
+  /** Population variance (divides by N; complements the sample {@link variance}). */
+  static populationVariance(list: CVec): ComplexNumber {
+    if (list.length < 1) return ComplexNumber.NaCN;
+    const theMean = ComplexMath.mean(list);
+    let theSum = ComplexMath.Zero;
+    for (const x of list) theSum = ComplexMath.add(theSum, ComplexMath.square(ComplexMath.subtract(x, theMean)));
+    return ComplexMath.multiply(1 / list.length, theSum);
+  }
+
+  static populationStandardDeviation(list: CVec): ComplexNumber {
+    return ComplexMath.squareRoot(ComplexMath.populationVariance(list));
+  }
+
   static zScoreList(list: CVec): CVec {
     const m = ComplexMath.mean(list);
     const sd = ComplexMath.standardDeviation(list);

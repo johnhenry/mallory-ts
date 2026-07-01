@@ -551,6 +551,19 @@ export class RealMath {
     return Math.sqrt(RealMath.variance(list));
   }
 
+  /** Population variance (divides by N; complements the sample {@link variance}). */
+  static populationVariance(list: RVec): number {
+    if (list.length < 1) return NaN;
+    const m = RealMath.mean(list);
+    let s = 0;
+    for (const x of list) s += Math.pow((x as number) - m, 2);
+    return s / list.length;
+  }
+
+  static populationStandardDeviation(list: RVec): number {
+    return Math.sqrt(RealMath.populationVariance(list));
+  }
+
   static normalProbabilityList(list: RVec, negativeInfinityApproximation = -5, integrationInterval = 0.0001): RVec {
     const m = RealMath.mean(list);
     const sd = RealMath.standardDeviation(list);

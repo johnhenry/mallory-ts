@@ -1,5 +1,7 @@
 import { Vector } from "./Vector.ts";
 import { VectorUtils, type Matrix } from "./VectorUtils.ts";
+import { ComplexNumber } from "./ComplexNumber.ts";
+import { ComplexMath } from "./ComplexMath.ts";
 
 /**
  * Structure — a generic algebraic structure (group, ring, field, …) defined by
@@ -337,5 +339,62 @@ export class Structure<T = unknown> {
 
   vectorCollapseOperation(alpha: SVec<T>, index = 0): T {
     return VectorUtils.collapse(alpha, this.operation(index)) as T;
+  }
+
+  // -- ready-made structures -----------------------------------------------
+
+  /** The field of real numbers (JS `number`). */
+  static realField(): Structure<number> {
+    return new Structure<number>({
+      criteria: [(x) => typeof x === "number"],
+      operations: [(a, b) => a + b, (a, b) => a * b],
+      inverses: [(x) => -x, (x) => 1 / x],
+      identities: [0, 1],
+      equality: (a, b) => a === b,
+      wrap: (x) => Number(x),
+    });
+  }
+
+  /** The field of complex numbers ({@link ComplexNumber}). */
+  static complexField(): Structure<ComplexNumber> {
+    return new Structure<ComplexNumber>({
+      criteria: [(x) => x instanceof ComplexNumber],
+      operations: [(a, b) => ComplexMath.add(a, b), (a, b) => ComplexMath.multiply(a, b)],
+      inverses: [(x) => x.neg(), (x) => x.recip()],
+      identities: [ComplexMath.Zero, ComplexMath.One],
+      equality: (a, b) => ComplexMath.equal(a, b),
+      wrap: (x) => (x instanceof ComplexNumber ? x : new ComplexNumber(x as number)),
+    });
+  }
+
+  /**
+   * The ring of integers modulo `n` (Z/nZ). It is a field when `n` is prime; for
+   * a composite `n`, {@link reciprocal} returns `NaN` for non-invertible elements.
+   */
+  static integersModulo(n: number): Structure<number> {
+    const mod = (x: number) => ((x % n) + n) % n;
+    const modInverse = (a: number): number => {
+      let [oldR, r] = [mod(a), n];
+      let [oldS, s] = [1, 0];
+      while (r !== 0) {
+        const q = Math.floor(oldR / r);
+        [oldR, r] = [r, oldR - q * r];
+        [oldS, s] = [s, oldS - q * s];
+      }
+      return oldR !== 1 ? NaN : mod(oldS);
+    };
+    return new Structure<number>({
+      criteria: [(x) => typeof x === "number"],
+      operations: [(a, b) => mod(a + b), (a, b) => mod(a * b)],
+      inverses: [(x) => mod(-x), modInverse],
+      identities: [0, 1],
+      equality: (a, b) => mod(a) === mod(b),
+      wrap: (x) => mod(Number(x)),
+    });
+  }
+
+  /** The Boolean ring GF(2): XOR is addition, AND is multiplication (elements 0/1). */
+  static booleanRing(): Structure<number> {
+    return Structure.integersModulo(2);
   }
 }
