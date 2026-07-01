@@ -68,6 +68,7 @@ export { StringEvaluator } from "./StringEvaluator.ts";
 export { StringVarMath } from "./StringVarMath.ts";
 // Algebraic structures & geometry
 export { Structure, type StructureOptions } from "./Structure.ts";
+export { type Expr, type FuncName, NotIntegrableError, Symbolic } from "./Symbolic.ts";
 export { Type, TypeTag } from "./Type.ts";
 // Utilities & leaves
 export { Utilities } from "./Utilities.ts";

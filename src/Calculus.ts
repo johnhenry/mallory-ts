@@ -1,11 +1,13 @@
+import { Symbolic } from "./Symbolic.ts";
+
 /**
  * Calculus — symbolic calculus entry points.
  *
  * In the ActionScript original every method here was an empty stub (the README
- * lists equation solving, integration, differentiation and Taylor expansion
- * under "Future Plans"). Rather than silently returning `""`/`null` like the
- * AS3 code — which invites hard-to-trace bugs in callers — these throw an
- * explicit {@link NotImplementedError} so the unfinished status is obvious.
+ * listed differentiation, integration and Taylor expansion under "Future
+ * Plans"). Differentiation, integration and Taylor expansion are now implemented
+ * on top of the {@link Symbolic} computer-algebra engine; equation solving
+ * (`solveFor`) remains a documented gap and throws {@link NotImplementedError}.
  */
 export class NotImplementedError extends Error {
   constructor(feature: string) {
@@ -20,23 +22,23 @@ export class Calculus {
   static readonly DerivativeTable: unknown = null;
   static readonly TaylorExpansionTable: unknown = null;
 
-  /** Solve `formula` for `variable`. Not yet implemented. */
+  /** Solve `formula` for `variable`. Still unimplemented (equation solving). */
   static solveFor(_formula: string, _variable = "x"): string {
     throw new NotImplementedError("Calculus.solveFor");
   }
 
-  /** Symbolic indefinite integral of `formula`. Not yet implemented. */
-  static integralFunction(_formula: string): string {
-    throw new NotImplementedError("Calculus.integralFunction");
+  /** The symbolic indefinite integral of `formula` with respect to `variable`. */
+  static integralFunction(formula: string, variable = "x"): string {
+    return Symbolic.toString(Symbolic.integrate(formula, variable));
   }
 
-  /** Symbolic derivative of `formula`. Not yet implemented. */
-  static derivativeFunction(_formula: string): string {
-    throw new NotImplementedError("Calculus.derivativeFunction");
+  /** The symbolic derivative of `formula` with respect to `variable`. */
+  static derivativeFunction(formula: string, variable = "x"): string {
+    return Symbolic.toString(Symbolic.differentiate(formula, variable));
   }
 
-  /** Taylor expansion of `formula`. Not yet implemented. */
-  static taylorExpansion(_formula: string): string {
-    throw new NotImplementedError("Calculus.taylorExpansion");
+  /** The Taylor expansion of `formula` about `center`, up to `order`. */
+  static taylorExpansion(formula: string, variable = "x", center = 0, order = 4): string {
+    return Symbolic.toString(Symbolic.taylor(formula, variable, center, order));
   }
 }
