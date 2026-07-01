@@ -1,5 +1,6 @@
 import { ComplexMath } from "./ComplexMath.ts";
 import { ComplexNumber } from "./ComplexNumber.ts";
+import { Decimal } from "./Decimal.ts";
 import { DualNumber } from "./DualNumber.ts";
 import { Quaternion } from "./Quaternion.ts";
 import { Rational } from "./Rational.ts";
@@ -410,6 +411,22 @@ export class Structure<T = unknown> {
       identities: [Rational.Zero, Rational.One],
       equality: (a, b) => a.equals(b),
       wrap: (x) => Rational.from(x as number),
+    });
+  }
+
+  /**
+   * The field of arbitrary-precision {@link Decimal}s. Division is approximate
+   * (rounded to `Decimal.DEFAULT_PRECISION` significant digits) — the one place
+   * this "field" isn't exact, matching `Decimal.divide` itself.
+   */
+  static decimalField(): Structure<Decimal> {
+    return new Structure<Decimal>({
+      criteria: [(x) => x instanceof Decimal],
+      operations: [(a, b) => a.add(b), (a, b) => a.multiply(b)],
+      inverses: [(x) => x.negate(), (x) => Decimal.One.divide(x)],
+      identities: [Decimal.Zero, Decimal.One],
+      equality: (a, b) => a.equals(b),
+      wrap: (x) => Decimal.from(x as number | string | bigint),
     });
   }
 

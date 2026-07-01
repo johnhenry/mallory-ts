@@ -119,6 +119,71 @@ p.derivative().evaluate(3); // 8
 Polynomial.divmod(p, Polynomial.parse("x + 1")); // long division: { quotient, remainder }
 ```
 
+## Counting mathematics (combinatorics)
+
+```ts
+import { Combinatorics } from "mallory-ts";
+
+Combinatorics.factorial(5); // 120n
+Combinatorics.binomial(10, 3); // 120n  (nCk, symmetric: nCk = nC(n-k))
+Combinatorics.permutationsCount(5, 3); // 60n  (nPk)
+Combinatorics.multinomial(10, [2, 3, 5]); // 2520n
+
+Combinatorics.catalan(5); // 42n  (balanced parenthesizations, binary trees, ...)
+Combinatorics.stirlingSecond(4, 2); // 7n  (partitions of a 4-set into 2 unlabeled subsets)
+Combinatorics.bell(4); // 15n  (total partitions of a 4-set)
+Combinatorics.partitionCount(5); // 7n  (integer partitions of 5)
+Combinatorics.derangements(4); // 9n  (permutations of 4 with no fixed point)
+```
+
+Everything is `bigint`-based (matching `NumberTheory`'s convention), since
+factorial-scale values exceed `Number.MAX_SAFE_INTEGER` well before `n`
+reaches 20. See
+[`test/CombinatoricsCounting.test.ts`](../test/CombinatoricsCounting.test.ts).
+
+## Arbitrary-precision decimals
+
+```ts
+import { Decimal, Structure } from "mallory-ts";
+
+// Exact decimal arithmetic — no float drift:
+Decimal.from("0.1").add(Decimal.from("0.2")).toString(); // "0.3" (0.1 + 0.2 !== 0.3 in plain JS)
+
+// Division is inherently approximate; precision (significant digits) is configurable:
+Decimal.from(1).divide(Decimal.from(3), 10).toString(); // "0.3333333333"
+
+// Also a Structure preset, for linear algebra over exact decimals:
+const decimals = Structure.decimalField();
+decimals.multiply(Decimal.from("1.5"), Decimal.from("2.5")).toString(); // "3.75"
+```
+
+See [`test/Decimal.test.ts`](../test/Decimal.test.ts).
+
+## Polynomials over arbitrary algebraic structures
+
+`PolynomialRing` generalizes `Polynomial` (which is `number`-only) to
+polynomials over any `Structure` — finite fields, the rationals, and so on —
+mirroring `GroupTheory`'s idiom of taking the algebra as a constructor
+parameter:
+
+```ts
+import { PolynomialRing, Structure } from "mallory-ts";
+
+const gf7 = Structure.integersModulo(7); // GF(7), a finite field
+const R = new PolynomialRing(gf7);
+
+const p1 = [2, 4, 1]; // (x-1)(x-2) mod 7
+const p2 = [3, 3, 1]; // (x-1)(x-3) mod 7
+R.gcd(p1, p2); // [6, 1] -- monic (x - 1), the shared root at x=1
+
+R.toString(p1); // "1*x^2+4*x+2"
+R.evaluate(p1, 5); // Horner's method, using gf7's field operations
+```
+
+Swap in `Structure.rationalField()` for exact polynomial division over the
+rationals. See
+[`test/PolynomialRing.test.ts`](../test/PolynomialRing.test.ts).
+
 ## Symbolic calculus
 
 ```ts
@@ -137,6 +202,35 @@ Integration covers the elementary rules (power rule, `1/x`, linear-substitution
 `sin`/`cos`/`exp`); anything outside that set throws `NotIntegrableError`
 rather than returning a wrong answer — e.g. `Symbolic.integrate("sin(x^2)")`.
 `Calculus.solveFor` (equation solving) is a documented, intentional gap.
+
+## Multivariable calculus
+
+```ts
+import { DualNumber, VectorCalculus } from "mallory-ts";
+
+// f(x, y) = x^2*y + y^3
+const f = (xs: DualNumber[]) => xs[0].pow(2).multiply(xs[1]).add(xs[1].pow(3));
+
+VectorCalculus.gradient(f, [1, 2]); // [4, 13] — exact, via DualNumber autodiff
+VectorCalculus.directionalDerivative(f, [1, 2], [3, 4]); // 12.8 — direction need not be a unit vector
+VectorCalculus.hessian(f, [1, 2]); // [[4, 2], [2, 12]] — central differences of the exact gradient
+
+// F: R^2 -> R^2
+const F = (xs: DualNumber[]) => [xs[0].pow(2).multiply(xs[1]), xs[0].add(xs[1].pow(2))];
+VectorCalculus.jacobian(F, [1, 2]); // [[4, 1], [1, 4]]
+
+// a rotational field F(x,y,z) = (-y, x, 0)
+const rot = (xs: DualNumber[]) => [xs[1].negate(), xs[0], DualNumber.constant(0)];
+VectorCalculus.curl3D(rot, [0, 0, 0]); // [0, 0, 2]
+
+// exact multivariable partials from a string expression, via Symbolic:
+VectorCalculus.symbolicGradient("x^2*y + y^3", ["x", "y"], { x: 1, y: 2 }); // [4, 13]
+```
+
+`gradient`/`jacobian`/`divergence`/`curl3D` are exact (forward-mode autodiff);
+`hessian` is the one approximate method — central differences of the *exact*
+gradient, not of `f` itself. See
+[`test/VectorCalculus.test.ts`](../test/VectorCalculus.test.ts).
 
 ## Exact and specialized number types
 

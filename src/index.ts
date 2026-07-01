@@ -5,9 +5,12 @@
  */
 
 export { Calculus, NotImplementedError } from "./Calculus.ts";
+// Counting mathematics
+export { Combinatorics } from "./Combinatorics.ts";
 export { ComplexMath } from "./ComplexMath.ts";
 export { ComplexNumber } from "./ComplexNumber.ts";
 export { Cycle } from "./Cycle.ts";
+export { Decimal } from "./Decimal.ts";
 export {
   type ContinuousDistribution,
   type DiscreteDistribution,
@@ -58,6 +61,7 @@ export { Numerical, type ODEStep } from "./Numerical.ts";
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
 export { Polynomial } from "./Polynomial.ts";
+export { PolynomialRing } from "./PolynomialRing.ts";
 export { Quaternion } from "./Quaternion.ts";
 export { Rational } from "./Rational.ts";
 // Numeric cores
@@ -74,5 +78,6 @@ export { Type, TypeTag } from "./Type.ts";
 export { Utilities } from "./Utilities.ts";
 // Foundations
 export { Vector } from "./Vector.ts";
+export { VectorCalculus } from "./VectorCalculus.ts";
 // Linear algebra
 export { type Matrix, VectorUtils } from "./VectorUtils.ts";

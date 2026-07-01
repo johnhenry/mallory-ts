@@ -138,11 +138,17 @@ Well beyond the original ActionScript scope, the library now spans:
 | Signal processing | `FFT` | radix-2 FFT/IFFT, DFT, FFT convolution |
 | Computational geometry | `Geometry`, `Transform2D` | convex hull, predicates, point-in-polygon, 2D affine transforms |
 | Graph theory | `Graph` | BFS/DFS, Dijkstra, Kruskal MST, topological sort, components, Floyd–Warshall |
+| Counting mathematics | `Combinatorics` | `bigint` factorials, nCk/nPk, multinomial coefficients, Catalan/Stirling/Bell numbers, integer partitions, derangements |
+| Arbitrary precision | `Decimal` | `bigint`-backed decimal arithmetic — exact add/subtract/multiply, configurable-precision division; also a `Structure` preset |
+| Abstract algebra | `PolynomialRing` | polynomials over any `Structure` (finite fields, rationals, ...) — long division, monic GCD, Horner evaluation |
+| Multivariable calculus | `VectorCalculus` | gradient, directional derivative, Jacobian, divergence, curl, Hessian (via `DualNumber` autodiff), plus an exact symbolic gradient |
 
 Many of these interlock: `GroupTheory` runs over any `Structure` (including
 `integersModulo`); `Graph.floydWarshall` emits matrices for `MatrixMath`;
-`DualNumber` gives exact derivatives; and `SpecialFunctions` gives the
-`Distributions` CDFs exact closed forms.
+`DualNumber` gives exact derivatives, which both `Structure.dualNumbers()` and
+`VectorCalculus` build on; `PolynomialRing` composes with any `Structure`
+preset (including the new `Decimal`-backed `decimalField()`); and
+`SpecialFunctions` gives the `Distributions` CDFs exact closed forms.
 
 ## License
 
