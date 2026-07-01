@@ -30,3 +30,9 @@ in translation, not carried over.
 - `Vector` x/y/z/t accessors coerced stored `0` to missing → now return real value.
 - `ComplexNumber.fromString` crashed when `String.match` returned `null`, and
   emitted `a+-b*i` for negative imaginary parts (couldn't round-trip) → rewritten `parse`.
+
+## Update: core numeric layer complete
+Ported & tested: Vector, ComplexNumber, Utilities, Type, IntUtils, Logic, Calculus,
+SpecialOperator, StringVarMath, VectorUtils, RealMath (98 fns), ComplexMath (126 fns).
+133 tests passing. Remaining: Structure, Permutation, Cycle, IntegerMath, Polynomial,
+Polygon, Enviornment, Expression, StringEvaluator, GraphUtils, Graph3DUtils.
