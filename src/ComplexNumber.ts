@@ -118,7 +118,9 @@ export class ComplexNumber {
    * Returns {@link NaCN} when the string is not a recognisable complex literal.
    */
   static parse(expression: string): ComplexNumber {
-    const s = expression.replace(/\s+/g, "").replace(/\*/g, "");
+    // Collapse only the `*` that multiplies `i` (e.g. `2*i` -> `2i`); a bare `*`
+    // is multiplication and must NOT be swallowed, or `"4*2"` would parse as 42.
+    const s = expression.replace(/\s+/g, "").replace(/\*i/g, "i");
     if (s.length === 0) return new ComplexNumber(NaN, NaN);
 
     if (!s.includes("i")) {
