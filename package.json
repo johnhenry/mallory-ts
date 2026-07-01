@@ -1,6 +1,6 @@
 {
   "name": "mallory-ts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Advanced college-level mathematics library — a modern TypeScript port of the Mallory ActionScript 3 library.",
   "type": "module",
   "exports": {
@@ -52,6 +52,7 @@
   "homepage": "https://github.com/johnhenry/mallory-ts#readme",
   "devDependencies": {
     "@biomejs/biome": "^2.5.1",
+    "fast-check": "^4.8.0",
     "typedoc": "^0.28.19",
     "typescript": "^5.9.3"
   },

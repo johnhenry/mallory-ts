@@ -1,5 +1,5 @@
-import { IntegerMath } from "./IntegerMath.ts";
-import { RealMath } from "./RealMath.ts";
+import { NumberTheory } from "./NumberTheory.ts";
+import { distanceVector } from "./RealMath.ts";
 import { Vector } from "./Vector.ts";
 
 /** A 2D point stored as a {@link Vector} `[x, y]`. */
@@ -20,7 +20,7 @@ type Point = Vector<number>;
 export class Polygon extends Vector<Point> {
   /** The vertex at `index`, wrapping around the polygon. */
   vertex(index: number): Point {
-    return this[IntegerMath.modulus(index, this.length)] as Point;
+    return this[Number(NumberTheory.mod(index, this.length))] as Point;
   }
 
   get vertexCount(): number {
@@ -41,16 +41,16 @@ export class Polygon extends Vector<Point> {
   perimeter(): number {
     let per = 0;
     for (let i = 0; i < this.edgeCount; i++) {
-      per += RealMath.distanceVector(this.vertex(i), this.vertex(i + 1));
+      per += distanceVector(this.vertex(i), this.vertex(i + 1));
     }
     return per;
   }
 
   /** Heron's-formula area of the triangle on the first three vertices. */
   private triArea(): number {
-    const a = RealMath.distanceVector(this.vertex(0), this.vertex(1));
-    const b = RealMath.distanceVector(this.vertex(1), this.vertex(2));
-    const c = RealMath.distanceVector(this.vertex(2), this.vertex(0));
+    const a = distanceVector(this.vertex(0), this.vertex(1));
+    const b = distanceVector(this.vertex(1), this.vertex(2));
+    const c = distanceVector(this.vertex(2), this.vertex(0));
     const s = (a + b + c) / 2;
     return Math.sqrt(s * (s - a) * (s - b) * (s - c));
   }
@@ -107,9 +107,9 @@ export class Polygon extends Vector<Point> {
    * (bug fix: the AS3 method always returned 0).
    */
   angle(i: number): number {
-    const ab = RealMath.distanceVector(this.vertex(i), this.vertex(i + 1));
-    const bc = RealMath.distanceVector(this.vertex(i), this.vertex(i - 1));
-    const ac = RealMath.distanceVector(this.vertex(i + 1), this.vertex(i - 1));
+    const ab = distanceVector(this.vertex(i), this.vertex(i + 1));
+    const bc = distanceVector(this.vertex(i), this.vertex(i - 1));
+    const ac = distanceVector(this.vertex(i + 1), this.vertex(i - 1));
     return Math.acos((ab * ab + bc * bc - ac * ac) / (2 * ab * bc));
   }
 

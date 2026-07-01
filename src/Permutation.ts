@@ -1,5 +1,5 @@
 import { Cycle } from "./Cycle.ts";
-import { IntegerMath } from "./IntegerMath.ts";
+import { NumberTheory } from "./NumberTheory.ts";
 
 /**
  * Permutation — a bijection described by a domain array and the codomain array
@@ -101,7 +101,7 @@ export class Permutation<T = unknown> {
   order(): number {
     const lengths = this.cycles().map((c) => c.length);
     if (lengths.length === 0) return 1;
-    return IntegerMath.lcmList(lengths);
+    return Number(NumberTheory.lcmList(lengths));
   }
 
   static readonly Identity: Permutation<unknown> = new Permutation<unknown>([], []);

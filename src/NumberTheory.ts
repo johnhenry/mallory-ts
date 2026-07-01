@@ -1,8 +1,8 @@
 /**
  * NumberTheory — fast, big-integer number theory: modular exponentiation and
  * inverse, the Chinese Remainder Theorem, Miller-Rabin primality, Pollard-rho
- * factorisation, and the Legendre/Jacobi symbols. Everything is `bigint`-based,
- * so (unlike {@link IntegerMath}) it does not overflow for large inputs.
+ * factorisation, GCD/LCM, and the Legendre/Jacobi symbols. Everything is
+ * `bigint`-based, so it does not overflow for large inputs.
  */
 
 const big = (x: bigint | number): bigint => (typeof x === "bigint" ? x : BigInt(x));
@@ -45,6 +45,9 @@ export class NumberTheory {
       [oldS, s] = [s, oldS - q * s];
       [oldT, t] = [t, oldT - q * t];
     }
+    // Negative inputs can leave oldR negative even though a*x + b*y = oldR still
+    // holds; flip all three signs so g matches gcd()'s non-negative convention.
+    if (oldR < 0n) return { g: -oldR, x: -oldS, y: -oldT };
     return { g: oldR, x: oldS, y: oldT };
   }
 
@@ -54,6 +57,31 @@ export class NumberTheory {
     const { g, x } = NumberTheory.extendedGcd(((big(a) % mod) + mod) % mod, mod);
     if (g !== 1n) return null;
     return ((x % mod) + mod) % mod;
+  }
+
+  /** Euclidean remainder, always in `[0, m)` for `m > 0`. Throws for `m === 0`. */
+  static mod(a: bigint | number, m: bigint | number): bigint {
+    const modulus = big(m);
+    if (modulus === 0n) throw new RangeError("NumberTheory.mod: modulus must be non-zero");
+    return ((big(a) % modulus) + modulus) % modulus;
+  }
+
+  /** `gcd(a, b)` (non-negative, `gcd(0, 0) === 0`). */
+  static gcd(a: bigint | number, b: bigint | number): bigint {
+    return bgcd(big(a), big(b));
+  }
+
+  /** `lcm(a, b) = |a·b| / gcd(a, b)`, or `0` if either operand is `0`. */
+  static lcm(a: bigint | number, b: bigint | number): bigint {
+    const A = big(a);
+    const B = big(b);
+    if (A === 0n || B === 0n) return 0n;
+    return babs(A * B) / bgcd(A, B);
+  }
+
+  /** LCM of a list of values (`1` for an empty list). */
+  static lcmList(values: Array<bigint | number>): bigint {
+    return values.reduce((acc: bigint, v) => NumberTheory.lcm(acc, big(v)), 1n);
   }
 
   /**

@@ -1,50 +1,51 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ComplexMath } from "../src/ComplexMath.ts";
 import { ComplexNumber } from "../src/ComplexNumber.ts";
 import { Polygon } from "../src/Polygon.ts";
-import { Polynomial } from "../src/Polynomial.ts";
-import { RealMath } from "../src/RealMath.ts";
+import { PolynomialRing, parsePolynomial, polynomialToString } from "../src/PolynomialRing.ts";
+import { roundTo } from "../src/RealMath.ts";
+import { populationStandardDeviation, populationVariance, variance } from "../src/Statistics.ts";
 import { Structure } from "../src/Structure.ts";
 import { Vector } from "../src/Vector.ts";
 
 const pt = (...xs: number[]) => Vector.fromArray(xs);
 const close = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) <= eps;
 const mat = (rows: number[][]) => Vector.fromArray(rows.map((r) => Vector.fromArray(r)));
+const polyRing = new PolynomialRing(Structure.realField());
 
-// --- Polynomial division & parse ---
+// --- PolynomialRing division & parse ---
 
-test("Polynomial.divmod: a = q*b + r", () => {
-  const a = new Polynomial(-4, 0, -2, 1); // x^3 - 2x^2 - 4
-  const b = new Polynomial(-3, 1); // x - 3
-  const { quotient, remainder } = Polynomial.divmod(a, b);
+test("PolynomialRing.divmod: a = q*b + r", () => {
+  const a = [-4, 0, -2, 1]; // x^3 - 2x^2 - 4
+  const b = [-3, 1]; // x - 3
+  const { quotient, remainder } = polyRing.divmod(a, b);
   // reconstruct q*b + r and compare to a
-  const recon = Polynomial.add(Polynomial.multiply(quotient, b), remainder);
+  const recon = polyRing.add(polyRing.multiply(quotient, b), remainder);
   assert.deepEqual(
-    [...recon].map((c) => RealMath.roundTo(c as number, 9)),
-    [...a],
+    recon.map((c) => roundTo(c, 9)),
+    a,
   );
   assert.ok(remainder.length <= b.length - 1 || remainder.every((c) => c === 0));
 });
 
-test("Polynomial.divide / mod exact division", () => {
+test("PolynomialRing.divide / mod exact division", () => {
   // (x^2 - 1) / (x - 1) = x + 1, remainder 0
-  const a = new Polynomial(-1, 0, 1);
-  const b = new Polynomial(-1, 1);
-  assert.deepEqual([...Polynomial.divide(a, b)], [1, 1]);
-  assert.deepEqual([...Polynomial.mod(a, b)], [0]);
+  const a = [-1, 0, 1];
+  const b = [-1, 1];
+  assert.deepEqual(polyRing.divide(a, b), [1, 1]);
+  assert.deepEqual(polyRing.mod(a, b), [], "zero polynomial is the empty array");
 });
 
-test("Polynomial.divmod throws on zero divisor", () => {
-  assert.throws(() => Polynomial.divmod(new Polynomial(1, 2), new Polynomial(0)));
+test("PolynomialRing.divmod throws on zero divisor", () => {
+  assert.throws(() => polyRing.divmod([1, 2], [0]));
 });
 
-test("Polynomial.parse inverts toPolyString", () => {
-  const p = new Polynomial(1, -2, 3);
-  const round = Polynomial.parse(p.toPolyString());
-  assert.deepEqual([...round], [1, -2, 3]);
-  assert.deepEqual([...Polynomial.parse("x^2-1")], [-1, 0, 1]);
-  assert.deepEqual([...Polynomial.parse("5")], [5]);
+test("parsePolynomial inverts polynomialToString", () => {
+  const p = [1, -2, 3];
+  const round = parsePolynomial(polynomialToString(p));
+  assert.deepEqual(round, [1, -2, 3]);
+  assert.deepEqual(parsePolynomial("x^2-1"), [-1, 0, 1]);
+  assert.deepEqual(parsePolynomial("5"), [5]);
 });
 
 // --- Polygon predicates ---
@@ -76,11 +77,9 @@ test("Polygon.isSimple", () => {
 
 test("population vs sample variance", () => {
   const data = pt(2, 4, 6);
-  assert.equal(RealMath.variance(data), 4, "sample (N-1)");
-  assert.ok(close(RealMath.populationVariance(data), 8 / 3), "population (N)");
-  assert.ok(close(RealMath.populationStandardDeviation(data), Math.sqrt(8 / 3)));
-  const cdata = Vector.fromArray([2, 4, 6].map((x) => new ComplexNumber(x)));
-  assert.ok(close(ComplexMath.populationVariance(cdata).value, 8 / 3));
+  assert.equal(variance(data), 4, "sample (N-1)");
+  assert.ok(close(populationVariance(data), 8 / 3), "population (N)");
+  assert.ok(close(populationStandardDeviation(data), Math.sqrt(8 / 3)));
 });
 
 // --- Vector parsing ---

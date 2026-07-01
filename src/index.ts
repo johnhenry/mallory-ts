@@ -4,10 +4,9 @@
  * A modern, tested TypeScript port of the Mallory ActionScript 3 library.
  */
 
-export { Calculus, NotImplementedError } from "./Calculus.ts";
 // Counting mathematics
 export { Combinatorics } from "./Combinatorics.ts";
-export { ComplexMath } from "./ComplexMath.ts";
+export * as ComplexMath from "./ComplexMath.ts";
 export { ComplexNumber } from "./ComplexNumber.ts";
 export { Cycle } from "./Cycle.ts";
 export { Decimal } from "./Decimal.ts";
@@ -45,7 +44,6 @@ export {
 } from "./GraphUtils.ts";
 export { GroupTheory } from "./GroupTheory.ts";
 // Combinatorics & number theory
-export { IntegerMath } from "./IntegerMath.ts";
 export { Interval } from "./Interval.ts";
 export { IntUtils } from "./IntUtils.ts";
 export { Logic } from "./Logic.ts";
@@ -60,16 +58,15 @@ export { NumberTheory } from "./NumberTheory.ts";
 export { Numerical, type ODEStep } from "./Numerical.ts";
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
-export { Polynomial } from "./Polynomial.ts";
-export { PolynomialRing } from "./PolynomialRing.ts";
+export { PolynomialRing, parsePolynomial, polynomialToString } from "./PolynomialRing.ts";
 export { Quaternion } from "./Quaternion.ts";
 export { Rational } from "./Rational.ts";
 // Numeric cores
-export { RealMath } from "./RealMath.ts";
+export * as RealMath from "./RealMath.ts";
 export { SpecialFunctions } from "./SpecialFunctions.ts";
 export { SpecialOperator } from "./SpecialOperator.ts";
+export * as Statistics from "./Statistics.ts";
 export { StringEvaluator } from "./StringEvaluator.ts";
-export { StringVarMath } from "./StringVarMath.ts";
 // Algebraic structures & geometry
 export { Structure, type StructureOptions } from "./Structure.ts";
 export { type Expr, type FuncName, NotIntegrableError, Symbolic } from "./Symbolic.ts";

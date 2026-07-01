@@ -104,19 +104,90 @@ test("toString round-trips through parse", () => {
   }
 });
 
-test("neg / conj / flip", () => {
+test("neg / conjugate / flip", () => {
   const z = new ComplexNumber(3, -2);
   assert.ok(z.neg().equals(new ComplexNumber(-3, 2)));
-  assert.ok(z.conj().equals(new ComplexNumber(3, 2)));
+  assert.ok(z.conjugate().equals(new ComplexNumber(3, 2)));
   assert.ok(z.flip().equals(new ComplexNumber(-2, 3)));
 });
 
-test("recip: 1/(a+bi) and zero -> NaCN", () => {
+test("reciprocal: 1/(a+bi) and zero -> NaCN", () => {
   const z = new ComplexNumber(1, 1);
-  const r = z.recip();
+  const r = z.reciprocal();
   assert.ok(Math.abs(r.value - 0.5) < 1e-12);
   assert.ok(Math.abs(r.iValue + 0.5) < 1e-12);
-  assert.ok(ComplexNumber.isNotComplex(new ComplexNumber(0, 0).recip()));
+  assert.ok(ComplexNumber.isNotComplex(new ComplexNumber(0, 0).reciprocal()));
+});
+
+test("add / subtract / multiply", () => {
+  assert.ok(new ComplexNumber(1, 2).add(new ComplexNumber(3, 4)).equals(new ComplexNumber(4, 6)));
+  assert.ok(new ComplexNumber(5, 5).subtract(new ComplexNumber(2, 1)).equals(new ComplexNumber(3, 4)));
+  // (1+2i)(3+4i) = 3+4i+6i-8 = -5+10i
+  assert.ok(new ComplexNumber(1, 2).multiply(new ComplexNumber(3, 4)).equals(new ComplexNumber(-5, 10)));
+});
+
+test("divide and the eight directed infinities (bug fix)", () => {
+  // (1+i)/(1-i) = i
+  const q = new ComplexNumber(1, 1).divide(new ComplexNumber(1, -1));
+  assert.ok(Math.abs(q.value - 0) < 1e-9 && Math.abs(q.iValue - 1) < 1e-9);
+  assert.equal(new ComplexNumber(2, 0).divide(new ComplexNumber(0, 0)), ComplexNumber.PositiveInfinity);
+  assert.equal(new ComplexNumber(-2, 0).divide(new ComplexNumber(0, 0)), ComplexNumber.NegativeInfinity);
+  assert.equal(new ComplexNumber(1, 1).divide(new ComplexNumber(0, 0)), ComplexNumber.InfinityQ1);
+  assert.equal(new ComplexNumber(0, 5).divide(new ComplexNumber(0, 0)), ComplexNumber.PositiveInfinityI);
+  assert.ok(Number.isNaN(new ComplexNumber(0, 0).divide(new ComplexNumber(0, 0)).value));
+});
+
+test("magnitude / angle", () => {
+  assert.ok(Math.abs(new ComplexNumber(3, 4).magnitude() - 5) < 1e-12);
+  assert.ok(Math.abs(new ComplexNumber(0, 1).angle() - Math.PI / 2) < 1e-12);
+});
+
+test("power at zero base is robust (bug fix)", () => {
+  assert.ok(new ComplexNumber(0).square().equals(new ComplexNumber(0)), "0^2 = 0");
+  assert.ok(new ComplexNumber(0).squareRoot().equals(new ComplexNumber(0)), "sqrt(0) = 0");
+  const p = new ComplexNumber(0).power(new ComplexNumber(0));
+  assert.ok(Math.abs(p.value - 1) < 1e-9 && Math.abs(p.iValue) < 1e-9, "0^0 = 1 by convention");
+});
+
+test("power and roots", () => {
+  const nine = new ComplexNumber(3).square();
+  assert.ok(Math.abs(nine.value - 9) < 1e-6 && Math.abs(nine.iValue) < 1e-6);
+  const i2 = new ComplexNumber(0, 1).square();
+  assert.ok(Math.abs(i2.value + 1) < 1e-9 && Math.abs(i2.iValue) < 1e-9, "i^2 = -1");
+  const rootNeg1 = new ComplexNumber(-1).squareRoot();
+  assert.ok(Math.abs(rootNeg1.value) < 1e-9 && Math.abs(rootNeg1.iValue - 1) < 1e-9, "sqrt(-1) = i");
+  const p = new ComplexNumber(2).power(new ComplexNumber(10));
+  assert.ok(Math.abs(p.value - 1024) < 1e-6 && Math.abs(p.iValue) < 1e-6);
+});
+
+test("logarithm", () => {
+  const lnE = ComplexNumber.E.logarithm();
+  assert.ok(Math.abs(lnE.value - 1) < 1e-9 && Math.abs(lnE.iValue) < 1e-9, "ln(e) = 1");
+  const lnI = new ComplexNumber(0, 1).logarithm();
+  assert.ok(Math.abs(lnI.value) < 1e-9 && Math.abs(lnI.iValue - Math.PI / 2) < 1e-9, "ln(i) = i*pi/2");
+});
+
+test("euler: e^(i*pi) = -1", () => {
+  const r = ComplexNumber.E.power(new ComplexNumber(0, Math.PI));
+  assert.ok(Math.abs(r.value + 1) < 1e-5 && Math.abs(r.iValue) < 1e-5);
+});
+
+test("trigonometry on reals matches Math", () => {
+  const s = new ComplexNumber(0.7).sine();
+  assert.ok(Math.abs(s.value - Math.sin(0.7)) < 1e-6 && Math.abs(s.iValue) < 1e-6);
+  const c = new ComplexNumber(1.2).cosine();
+  assert.ok(Math.abs(c.value - Math.cos(1.2)) < 1e-6 && Math.abs(c.iValue) < 1e-6);
+  // sin(i) = i*sinh(1)
+  const si = new ComplexNumber(0, 1).sine();
+  assert.ok(Math.abs(si.value) < 1e-6 && Math.abs(si.iValue - Math.sinh(1)) < 1e-6);
+});
+
+test("inverse trig round-trips", () => {
+  const a0 = new ComplexNumber(0).arcSine();
+  assert.ok(Math.abs(a0.value) < 1e-9 && Math.abs(a0.iValue) < 1e-9, "arcsin(0) = 0 (bug fix via power(0))");
+  const z = new ComplexNumber(0.4, 0.1);
+  const back = z.arcSine().sine();
+  assert.ok(Math.abs(back.value - 0.4) < 1e-5 && Math.abs(back.iValue - 0.1) < 1e-5);
 });
 
 test("toVector returns [re, im]", () => {

@@ -1,4 +1,3 @@
-import { ComplexMath } from "./ComplexMath.ts";
 import { ComplexNumber } from "./ComplexNumber.ts";
 import { Decimal } from "./Decimal.ts";
 import { DualNumber } from "./DualNumber.ts";
@@ -363,10 +362,10 @@ export class Structure<T = unknown> {
   static complexField(): Structure<ComplexNumber> {
     return new Structure<ComplexNumber>({
       criteria: [(x) => x instanceof ComplexNumber],
-      operations: [(a, b) => ComplexMath.add(a, b), (a, b) => ComplexMath.multiply(a, b)],
-      inverses: [(x) => x.neg(), (x) => x.recip()],
-      identities: [ComplexMath.Zero, ComplexMath.One],
-      equality: (a, b) => ComplexMath.equal(a, b),
+      operations: [(a, b) => a.add(b), (a, b) => a.multiply(b)],
+      inverses: [(x) => x.neg(), (x) => x.reciprocal()],
+      identities: [ComplexNumber.Zero, ComplexNumber.One],
+      equality: (a, b) => a.equals(b),
       wrap: (x) => (x instanceof ComplexNumber ? x : new ComplexNumber(x as number)),
     });
   }

@@ -2,22 +2,15 @@
 // exercises a handful of APIs. Proves that `npm run build` produces a working,
 // importable artifact (something the unit tests, which run against src/, cannot).
 import assert from "node:assert/strict";
-import {
-  ComplexMath,
-  ComplexNumber,
-  RealMath,
-  StringEvaluator,
-  Structure,
-  Vector,
-} from "../dist/index.js";
+import { ComplexNumber, StringEvaluator, Structure, Vector } from "../dist/index.js";
 
 // Complex arithmetic: e^(iπ) ≈ -1
-const euler = ComplexMath.power(ComplexMath.E, new ComplexNumber(0, Math.PI));
+const euler = ComplexNumber.E.power(new ComplexNumber(0, Math.PI));
 assert.ok(Math.abs(euler.value - -1) < 1e-5 && Math.abs(euler.iValue) < 1e-5, "euler identity");
 
 // Real linear algebra
 assert.equal(
-  RealMath.determinant(Vector.fromArray([Vector.fromArray([1, 2]), Vector.fromArray([3, 4])])),
+  Structure.realField().determinant(Vector.fromArray([Vector.fromArray([1, 2]), Vector.fromArray([3, 4])])),
   -2,
 );
 

@@ -4,13 +4,18 @@ import type { Structure } from "./Structure.ts";
  * PolynomialRing — polynomials with coefficients in an arbitrary {@link Structure}
  * (a finite field, the rationals, quaternions, whatever the structure supplies),
  * following {@link GroupTheory}'s idiom of accepting the algebra as a constructor
- * parameter rather than duplicating field logic. `RealMath`/{@link Polynomial}
- * already cover plain `number` polynomials; this generalizes long division, GCD,
- * and evaluation to any field — e.g. polynomials over `Structure.integersModulo(7)`.
+ * parameter rather than duplicating field logic. This generalizes long division,
+ * GCD, differentiation, and evaluation to any field — e.g. polynomials over
+ * `Structure.integersModulo(7)`, or plain real polynomials via
+ * `new PolynomialRing(Structure.realField())`.
  *
  * Coefficients are plain `T[]` arrays in ascending power (`p[i]` is the
  * coefficient of `x^i`), trimmed of trailing zero coefficients. The zero
  * polynomial is `[]`, with degree `-1`.
+ *
+ * {@link parsePolynomial}/{@link polynomialToString} below are real-number-only
+ * helpers for the common `"3*x^2-2*x+1"` string notation — parsing/formatting
+ * needs decimal syntax, which doesn't generalize to an arbitrary `Structure`.
  */
 export class PolynomialRing<T> {
   readonly structure: Structure<T>;
@@ -125,6 +130,38 @@ export class PolynomialRing<T> {
     return this.makeMonic(x);
   }
 
+  /** `n` copies of the structure's `one`, added together (`n` as an element of the structure). */
+  private natural(n: number): T {
+    let result = this.structure.zero;
+    for (let k = 0; k < n; k++) result = this.structure.add(result, this.structure.one);
+    return result;
+  }
+
+  /** The derivative polynomial (`i·c_i`, via repeated addition — well-defined over any ring). */
+  derivative(p: T[]): T[] {
+    const trimmed = this.trim(p);
+    const out: T[] = [];
+    for (let i = 1; i < trimmed.length; i++) {
+      let term = this.structure.zero;
+      for (let k = 0; k < i; k++) term = this.structure.add(term, trimmed[i] as T);
+      out.push(term);
+    }
+    return this.trim(out);
+  }
+
+  /**
+   * An antiderivative with zero constant of integration (`c_i / (i+1)`, via the
+   * structure's `reciprocal`).
+   */
+  antiderivative(p: T[]): T[] {
+    const trimmed = this.trim(p);
+    const out: T[] = [this.structure.zero];
+    for (let i = 0; i < trimmed.length; i++) {
+      out.push(this.structure.multiply(trimmed[i] as T, this.structure.reciprocal(this.natural(i + 1))));
+    }
+    return this.trim(out);
+  }
+
   /** Evaluate at `x` via Horner's method, using the structure's field operations. */
   evaluate(p: T[], x: T): T {
     let result = this.structure.zero;
@@ -153,4 +190,51 @@ export class PolynomialRing<T> {
     }
     return terms.join("+");
   }
+}
+
+/**
+ * Parse a real-coefficient polynomial string such as `"3*x^2-2*x+1"` into
+ * ascending-power coefficients (inverse of {@link polynomialToString}).
+ */
+export function parsePolynomial(str: string, variable = "x"): number[] {
+  const s = str.replace(/\s+/g, "");
+  if (s === "") return [0];
+  const terms = s
+    .replace(/-/g, "+-")
+    .split("+")
+    .filter((t) => t !== "");
+  const p: number[] = [];
+  for (const term of terms) {
+    let coef: number;
+    let exp: number;
+    const vi = term.indexOf(variable);
+    if (vi === -1) {
+      coef = Number(term);
+      exp = 0;
+    } else {
+      const coefPart = term.slice(0, vi).replace(/\*$/, "");
+      coef = coefPart === "" || coefPart === "+" ? 1 : coefPart === "-" ? -1 : Number(coefPart);
+      const rest = term.slice(vi + variable.length);
+      exp = rest.startsWith("^") ? Number(rest.slice(1)) : 1;
+    }
+    p[exp] = (p[exp] ?? 0) + coef;
+  }
+  for (let i = 0; i < p.length; i++) if (p[i] === undefined) p[i] = 0;
+  return p;
+}
+
+/**
+ * Render ascending-power real coefficients as a human-readable string such as
+ * `3*x^2+2*x+1` (inverse of {@link parsePolynomial}).
+ */
+export function polynomialToString(coeffs: number[], variable = "x", descending = true): string {
+  const term = (coef: number, i: number): string => {
+    if (i === 0) return String(coef);
+    if (i === 1) return `${coef}*${variable}`;
+    return `${coef}*${variable}^${i}`;
+  };
+  const indices = descending
+    ? Array.from({ length: coeffs.length }, (_, i) => coeffs.length - 1 - i)
+    : Array.from({ length: coeffs.length }, (_, i) => i);
+  return indices.map((i) => term(coeffs[i] as number, i)).join("+");
 }

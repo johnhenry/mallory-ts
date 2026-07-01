@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Calculus, NotImplementedError } from "../src/Calculus.ts";
 import { Symbolic } from "../src/Symbolic.ts";
 
 const evalAt = (expr: string, x: number) => Symbolic.evaluate(expr, { x });
-
-// --- Symbolic engine ---
 
 test("parse and evaluate", () => {
   assert.equal(Symbolic.evaluate("2 + 3*4"), 14);
@@ -64,16 +61,4 @@ test("taylor expansion of exp about 0", () => {
   const t = Symbolic.taylor("exp(x)", "x", 0, 4);
   assert.ok(Math.abs(Symbolic.evaluate(t, { x: 1 }) - (1 + 1 + 0.5 + 1 / 6 + 1 / 24)) < 1e-12);
   void evalAt;
-});
-
-// --- Calculus facade ---
-
-test("Calculus derivative/integral/taylor now work", () => {
-  assert.equal(Calculus.derivativeFunction("x^3"), "3*x^2");
-  assert.ok(Calculus.integralFunction("x^2").includes("x^3"));
-  assert.ok(Calculus.taylorExpansion("exp(x)", "x", 0, 2).length > 0);
-});
-
-test("Calculus.solveFor is still unimplemented", () => {
-  assert.throws(() => Calculus.solveFor("x^2 - 1"), NotImplementedError);
 });

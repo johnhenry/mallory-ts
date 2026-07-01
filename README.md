@@ -6,13 +6,14 @@ ActionScript 3 library (a project worked on, on and off, since 2004).
 
 Complex numbers, linear algebra over arbitrary algebraic structures,
 combinatorics and number theory, an expression evaluator, and renderer-agnostic
-graphing geometry — all rewritten in modern TypeScript with `node:test`.
+graphing geometry — all rewritten in modern TypeScript with `node:test`
+(example-based and, for algebraic laws, property-based via `fast-check`).
 
 ```ts
-import { ComplexMath, ComplexNumber, RealMath, Vector, StringEvaluator } from "mallory-ts";
+import { ComplexNumber, Structure, Vector, StringEvaluator } from "mallory-ts";
 
-ComplexMath.power(ComplexMath.E, new ComplexNumber(0, Math.PI)); // ≈ -1  (Euler)
-RealMath.determinant(/* 3×3 matrix */);
+ComplexNumber.E.power(new ComplexNumber(0, Math.PI)); // ≈ -1  (Euler)
+Structure.realField().determinant(/* 3×3 matrix, as Vector<Vector<number>> */);
 StringEvaluator.evaluate("sin(pi/2) + 2^3", StringEvaluator.mathEnvironment()); // 9
 ```
 
@@ -47,14 +48,14 @@ tests → build → dist smoke test → docs build on Node 22 and 24.
 
 | Area | Modules |
 |------|---------|
-| Foundations | `Vector`, `ComplexNumber`, `Type` |
-| Real & complex analysis | `RealMath`, `ComplexMath` (arithmetic, trig, logs, numeric calculus, statistics) |
-| Linear algebra | `VectorUtils`, matrix ops in `RealMath`/`ComplexMath`, generic linear algebra in `Structure` |
+| Foundations | `Vector`, `ComplexNumber` (arithmetic, trig, logs as fluent instance methods), `Type` |
+| Real & complex analysis | `RealMath` (plain scalar functions, not a class), `ComplexMath` (complex vectors + probability helpers), `Statistics` (descriptive stats on `number[]`) |
+| Linear algebra | `VectorUtils`, generic linear algebra in `Structure`, numerical decompositions in `MatrixMath` |
 | Algebraic structures | `Structure` — groups/rings/fields; do linear algebra over e.g. GF(7) |
-| Number theory & combinatorics | `IntegerMath`, `Permutation`, `Cycle`, `Polynomial` |
+| Number theory & combinatorics | `Permutation`, `Cycle` |
 | Geometry | `Polygon`, `GraphUtils`, `Graph3DUtils` (emit paths/meshes as plain data) |
 | Expressions | `Environment`, `Expression`, `StringEvaluator` |
-| Misc | `Utilities`, `Logic`, `IntUtils`, `StringVarMath`, `SpecialOperator`, `Calculus` |
+| Misc | `Utilities`, `Logic`, `IntUtils`, `SpecialOperator` |
 
 ## About the port
 
@@ -108,10 +109,12 @@ the AS3 library never had:
 - **`ComplexNumber`**: `fromPolar`, `fromVector`, `fromXML` (inverses of
   `magnitude`/`angle`, `toVector`, `toXML`).
 - **`Vector`**: `fromXML`, `fromString` (best-effort inverses of `toXML`/`toString`).
-- **`Polynomial`**: `evaluate` (Horner), `add`/`subtract`, `divide`/`mod`/`divmod`
-  (long division), and `parse` (inverse of `toPolyString`).
+- **`PolynomialRing`**: `evaluate` (Horner), `add`/`subtract`, `divide`/`mod`/`divmod`
+  (long division), `derivative`/`antiderivative` (generalized to any `Structure`,
+  not just reals), and the real-number-only `parsePolynomial`/`polynomialToString`
+  helpers (inverses of each other).
 - **`Polygon`**: `centroid`, `contains` (point-in-polygon), `isConvex`, `isSimple`.
-- **`RealMath`/`ComplexMath`**: `populationVariance` / `populationStandardDeviation`
+- **`Statistics`**: `populationVariance` / `populationStandardDeviation`
   alongside the sample versions.
 - **`Structure` presets**: `Structure.realField()`, `complexField()`,
   `integersModulo(n)` (a field when `n` is prime), and `booleanRing()` — so you
@@ -129,7 +132,7 @@ Well beyond the original ActionScript scope, the library now spans:
 | Area | Module(s) | Highlights |
 |------|-----------|------------|
 | Numerical linear algebra | `MatrixMath` | LU, QR, Cholesky, symmetric eigen (Jacobi), SVD; `solve`, RREF, rank, null space, least squares, pseudo-inverse, norms, condition number |
-| Symbolic calculus | `Symbolic`, `Calculus` | expression parser, symbolic differentiation, algebraic simplification, elementary integration, Taylor series |
+| Symbolic calculus | `Symbolic` | expression parser, symbolic differentiation, algebraic simplification, elementary integration, Taylor series |
 | Number types | `Rational`, `Quaternion`, `DualNumber`, `Interval` | exact bigint rationals, 3D-rotation quaternions, forward-mode autodiff, rigorous interval arithmetic — each also a `Structure` preset |
 | Number theory | `NumberTheory` | `bigint` modPow, extended GCD, CRT, Miller–Rabin, Pollard-rho factorization, Legendre/Jacobi |
 | Group theory | `GroupTheory` | Cayley tables, axiom checks, element order, generated subgroups, cosets, Lagrange, orbits, Sₙ/Zₙ |
@@ -140,7 +143,7 @@ Well beyond the original ActionScript scope, the library now spans:
 | Graph theory | `Graph` | BFS/DFS, Dijkstra, Kruskal MST, topological sort, components, Floyd–Warshall |
 | Counting mathematics | `Combinatorics` | `bigint` factorials, nCk/nPk, multinomial coefficients, Catalan/Stirling/Bell numbers, integer partitions, derangements |
 | Arbitrary precision | `Decimal` | `bigint`-backed decimal arithmetic — exact add/subtract/multiply, configurable-precision division; also a `Structure` preset |
-| Abstract algebra | `PolynomialRing` | polynomials over any `Structure` (finite fields, rationals, ...) — long division, monic GCD, Horner evaluation |
+| Abstract algebra | `PolynomialRing` | polynomials over any `Structure` (finite fields, rationals, ...) — long division, monic GCD, Horner evaluation, derivative/antiderivative |
 | Multivariable calculus | `VectorCalculus` | gradient, directional derivative, Jacobian, divergence, curl, Hessian (via `DualNumber` autodiff), plus an exact symbolic gradient |
 
 Many of these interlock: `GroupTheory` runs over any `Structure` (including

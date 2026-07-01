@@ -6,6 +6,10 @@ import { SpecialFunctions as SF } from "./SpecialFunctions.ts";
  * plus a small suite of {@link HypothesisTests}. CDFs use the exact incomplete
  * gamma/beta functions from {@link SpecialFunctions} rather than numeric
  * integration, so they are accurate in the tails.
+ *
+ * Every factory takes an optional trailing `rng: () => number` (default
+ * `Math.random`), threaded through to every nested distribution it samples
+ * from — pass a seeded generator to make `sample()` deterministic in tests.
  */
 
 export interface ContinuousDistribution {
@@ -70,52 +74,52 @@ export class Distributions {
     return mean + sd * normInv(p);
   }
 
-  static normal(mean = 0, sd = 1): ContinuousDistribution {
+  static normal(mean = 0, sd = 1, rng: () => number = Math.random): ContinuousDistribution {
     return {
       pdf: (x) => Math.exp(-0.5 * ((x - mean) / sd) ** 2) / (sd * Math.sqrt(2 * Math.PI)),
       cdf: (x) => 0.5 * SF.erfc(-(x - mean) / (sd * Math.SQRT2)),
       mean: () => mean,
       variance: () => sd * sd,
-      sample: () => mean + sd * Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()),
+      sample: () => mean + sd * Math.sqrt(-2 * Math.log(1 - rng())) * Math.cos(2 * Math.PI * rng()),
     };
   }
 
-  static exponential(rate = 1): ContinuousDistribution {
+  static exponential(rate = 1, rng: () => number = Math.random): ContinuousDistribution {
     return {
       pdf: (x) => (x < 0 ? 0 : rate * Math.exp(-rate * x)),
       cdf: (x) => (x < 0 ? 0 : 1 - Math.exp(-rate * x)),
       mean: () => 1 / rate,
       variance: () => 1 / (rate * rate),
-      sample: () => -Math.log(1 - Math.random()) / rate,
+      sample: () => -Math.log(1 - rng()) / rate,
     };
   }
 
-  static uniform(a = 0, b = 1): ContinuousDistribution {
+  static uniform(a = 0, b = 1, rng: () => number = Math.random): ContinuousDistribution {
     return {
       pdf: (x) => (x >= a && x <= b ? 1 / (b - a) : 0),
       cdf: (x) => (x < a ? 0 : x > b ? 1 : (x - a) / (b - a)),
       mean: () => (a + b) / 2,
       variance: () => (b - a) ** 2 / 12,
-      sample: () => a + Math.random() * (b - a),
+      sample: () => a + rng() * (b - a),
     };
   }
 
-  static gamma(shape: number, scale = 1): ContinuousDistribution {
+  static gamma(shape: number, scale = 1, rng: () => number = Math.random): ContinuousDistribution {
     return {
       pdf: (x) => (x <= 0 ? 0 : (x ** (shape - 1) * Math.exp(-x / scale)) / (SF.gamma(shape) * scale ** shape)),
       cdf: (x) => (x <= 0 ? 0 : SF.regularizedGammaP(shape, x / scale)),
       mean: () => shape * scale,
       variance: () => shape * scale * scale,
-      sample: () => Distributions.sampleGamma(shape) * scale,
+      sample: () => Distributions.sampleGamma(shape, rng) * scale,
     };
   }
 
-  static chiSquare(df: number): ContinuousDistribution {
-    const g = Distributions.gamma(df / 2, 2);
+  static chiSquare(df: number, rng: () => number = Math.random): ContinuousDistribution {
+    const g = Distributions.gamma(df / 2, 2, rng);
     return { ...g, mean: () => df, variance: () => 2 * df };
   }
 
-  static studentT(df: number): ContinuousDistribution {
+  static studentT(df: number, rng: () => number = Math.random): ContinuousDistribution {
     const c = SF.gamma((df + 1) / 2) / (Math.sqrt(df * Math.PI) * SF.gamma(df / 2));
     return {
       pdf: (x) => c * (1 + (x * x) / df) ** (-(df + 1) / 2),
@@ -126,14 +130,14 @@ export class Distributions {
       mean: () => (df > 1 ? 0 : Number.NaN),
       variance: () => (df > 2 ? df / (df - 2) : Number.POSITIVE_INFINITY),
       sample: () => {
-        const z = Distributions.normal().sample();
-        const chi = Distributions.chiSquare(df).sample();
+        const z = Distributions.normal(0, 1, rng).sample();
+        const chi = Distributions.chiSquare(df, rng).sample();
         return z / Math.sqrt(chi / df);
       },
     };
   }
 
-  static binomial(n: number, p: number): DiscreteDistribution {
+  static binomial(n: number, p: number, rng: () => number = Math.random): DiscreteDistribution {
     const logChoose = (k: number) => SF.lnGamma(n + 1) - SF.lnGamma(k + 1) - SF.lnGamma(n - k + 1);
     return {
       pmf: (k) =>
@@ -149,13 +153,13 @@ export class Distributions {
       variance: () => n * p * (1 - p),
       sample: () => {
         let count = 0;
-        for (let i = 0; i < n; i++) if (Math.random() < p) count++;
+        for (let i = 0; i < n; i++) if (rng() < p) count++;
         return count;
       },
     };
   }
 
-  static poisson(lambda: number): DiscreteDistribution {
+  static poisson(lambda: number, rng: () => number = Math.random): DiscreteDistribution {
     return {
       pmf: (k) => (k < 0 || !Number.isInteger(k) ? 0 : Math.exp(k * Math.log(lambda) - lambda - SF.lnGamma(k + 1))),
       cdf: (k) => (k < 0 ? 0 : SF.regularizedGammaQ(Math.floor(k) + 1, lambda)),
@@ -167,7 +171,7 @@ export class Distributions {
         let prod = 1;
         do {
           k++;
-          prod *= Math.random();
+          prod *= rng();
         } while (prod > L);
         return k - 1;
       },
@@ -175,19 +179,19 @@ export class Distributions {
   }
 
   /** Marsaglia-Tsang gamma sampler (shape ≥ 0). */
-  private static sampleGamma(shape: number): number {
-    if (shape < 1) return Distributions.sampleGamma(shape + 1) * Math.random() ** (1 / shape);
+  private static sampleGamma(shape: number, rng: () => number = Math.random): number {
+    if (shape < 1) return Distributions.sampleGamma(shape + 1, rng) * rng() ** (1 / shape);
     const d = shape - 1 / 3;
     const c = 1 / Math.sqrt(9 * d);
     for (;;) {
       let x: number;
       let v: number;
       do {
-        x = Distributions.normal().sample();
+        x = Distributions.normal(0, 1, rng).sample();
         v = 1 + c * x;
       } while (v <= 0);
       v = v * v * v;
-      const u = Math.random();
+      const u = rng();
       if (u < 1 - 0.0331 * x ** 4) return d * v;
       if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
     }

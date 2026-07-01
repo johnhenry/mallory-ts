@@ -1,5 +1,4 @@
 import type { Polygon } from "./Polygon.ts";
-import { RealMath } from "./RealMath.ts";
 import type { Vector } from "./Vector.ts";
 import { VectorUtils } from "./VectorUtils.ts";
 
@@ -20,9 +19,13 @@ import { VectorUtils } from "./VectorUtils.ts";
  *    `alpha1`) and had unreachable dead code after its `return`.
  *
  * NOTE: `create3DCurveSegment`/`create3DPrism` reproduce the original ribbon
- * geometry verbatim, including its questionable mixing of degrees into
- * `Math.cos`/`Math.sin`. Its intended on-screen appearance cannot be verified
- * outside Flash, so it is ported faithfully rather than "corrected" by guesswork.
+ * geometry, but with one fix: the AS3 original computed `phi` by converting
+ * an `atan2` result (radians) to degrees, then passed that degrees value
+ * straight into `Math.cos`/`Math.sin` (which expect radians) — a unit
+ * mismatch, not a deliberate choice. `phi` is now kept in radians throughout.
+ * The on-screen appearance still cannot be pixel-verified against the
+ * original Flash renderer (papervision3d no longer runs anywhere), so this is
+ * a best-effort mathematical correction, not a confirmed visual match.
  */
 
 export interface Vec3 {
@@ -122,7 +125,7 @@ export class Graph3DUtils {
     const t = planeThickness / 2;
     const a = asPoint(firstPoint);
     const b = asPoint(secondPoint);
-    const phi = 90 - RealMath.radiansToDegrees(Math.atan2(b.y - a.y, b.x - a.x));
+    const phi = Math.PI / 2 - Math.atan2(b.y - a.y, b.x - a.x);
     const a1 = v3(a.x - Math.cos(phi) * t * Math.cos(planeAngle), a.y + Math.sin(phi) * t * Math.sin(planeAngle));
     const a2 = v3(a.x + Math.cos(phi) * t * Math.cos(planeAngle), a.y - Math.sin(phi) * t * Math.sin(planeAngle));
     const b1 = v3(b.x - Math.cos(phi) * t * Math.cos(planeAngle), b.y + Math.sin(phi) * t * Math.sin(planeAngle));
@@ -147,7 +150,7 @@ export class Graph3DUtils {
     const t = planeThickness / 2;
     const a = asPoint(firstPoint);
     const b = asPoint(secondPoint);
-    const phi = 90 - RealMath.radiansToDegrees(Math.atan2(b.y - a.y, b.x - a.x));
+    const phi = Math.PI / 2 - Math.atan2(b.y - a.y, b.x - a.x);
 
     const a1 = v3(a.x - Math.cos(phi), a.y + Math.sin(phi) * t, a.z);
     const a11 = v3(a1.x, a1.y, a1.z + t);

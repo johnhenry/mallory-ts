@@ -1,8 +1,7 @@
 /**
  * Symbolic — a small computer-algebra engine: an expression AST with parsing,
  * symbolic differentiation, algebraic simplification, basic symbolic
- * integration, Taylor expansion, and numeric evaluation. This is what powers the
- * previously-stubbed {@link Calculus} class.
+ * integration, Taylor expansion, and numeric evaluation.
  */
 
 export type FuncName = "sin" | "cos" | "tan" | "exp" | "ln" | "sqrt";

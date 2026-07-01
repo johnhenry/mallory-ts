@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Cycle } from "../src/Cycle.ts";
 import { Permutation } from "../src/Permutation.ts";
-import { Polynomial } from "../src/Polynomial.ts";
+import { PolynomialRing, polynomialToString } from "../src/PolynomialRing.ts";
+import { Structure } from "../src/Structure.ts";
+
+const R = new PolynomialRing(Structure.realField());
 
 test("Cycle rejects repeats (bug fix)", () => {
   assert.throws(() => new Cycle([1, 2, 1]));
@@ -77,22 +80,22 @@ test("Cycle <-> Permutation round trip", () => {
   assert.equal(p.apply(3), 1);
 });
 
-test("Polynomial degree / derivative / antiderivative", () => {
-  const p = new Polynomial(1, 2, 3); // 3x^2 + 2x + 1
-  assert.equal(p.degree(), 2);
-  assert.deepEqual([...p.derivative()], [2, 6]); // 6x + 2
-  assert.deepEqual([...p.antiderivative()], [0, 1, 1, 1]); // x^3 + x^2 + x
+test("PolynomialRing degree / derivative / antiderivative", () => {
+  const p = [1, 2, 3]; // 3x^2 + 2x + 1
+  assert.equal(R.degree(p), 2);
+  assert.deepEqual(R.derivative(p), [2, 6]); // 6x + 2
+  assert.deepEqual(R.antiderivative(p), [0, 1, 1, 1]); // x^3 + x^2 + x
 });
 
-test("Polynomial multiply (bug fix: dimension.value)", () => {
-  const a = new Polynomial(1, 1); // x + 1
-  const b = new Polynomial(1, 1); // x + 1
+test("PolynomialRing multiply (bug fix: dimension.value)", () => {
+  const a = [1, 1]; // x + 1
+  const b = [1, 1]; // x + 1
   // (x+1)^2 = x^2 + 2x + 1
-  assert.deepEqual([...Polynomial.multiply(a, b)], [1, 2, 1]);
+  assert.deepEqual(R.multiply(a, b), [1, 2, 1]);
 });
 
-test("Polynomial toPolyString", () => {
-  const p = new Polynomial(1, 2, 3);
-  assert.equal(p.toPolyString(), "3*x^2+2*x+1");
-  assert.equal(p.toPolyString("x", false), "1+2*x+3*x^2");
+test("polynomialToString", () => {
+  const p = [1, 2, 3];
+  assert.equal(polynomialToString(p), "3*x^2+2*x+1");
+  assert.equal(polynomialToString(p, "x", false), "1+2*x+3*x^2");
 });

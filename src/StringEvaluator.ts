@@ -1,4 +1,3 @@
-import { ComplexMath } from "./ComplexMath.ts";
 import { ComplexNumber } from "./ComplexNumber.ts";
 import { Environment } from "./Environment.ts";
 import { Expression } from "./Expression.ts";
@@ -166,18 +165,18 @@ export class StringEvaluator {
 
   /**
    * Build an {@link Environment} pre-populated with the arithmetic operators,
-   * common {@link ComplexMath} functions and the constants `pi`, `e`, `i`, `phi`
-   * — enough to evaluate ordinary numeric expressions out of the box.
+   * common {@link ComplexNumber} instance methods and the constants `pi`, `e`,
+   * `i`, `phi` — enough to evaluate ordinary numeric expressions out of the box.
    */
   static mathEnvironment(): Environment {
     const env = new Environment();
     const cn = (x: unknown) => (x instanceof ComplexNumber ? x : new ComplexNumber(x as number));
 
-    env.assignImmutable("add", (a: unknown, b: unknown) => ComplexMath.add(cn(a), cn(b)));
-    env.assignImmutable("subtract", (a: unknown, b: unknown) => ComplexMath.subtract(cn(a), cn(b)));
-    env.assignImmutable("multiply", (a: unknown, b: unknown) => ComplexMath.multiply(cn(a), cn(b)));
-    env.assignImmutable("divide", (a: unknown, b: unknown) => ComplexMath.divide(cn(a), cn(b)));
-    env.assignImmutable("power", (a: unknown, b: unknown) => ComplexMath.power(cn(a), cn(b)));
+    env.assignImmutable("add", (a: unknown, b: unknown) => cn(a).add(cn(b)));
+    env.assignImmutable("subtract", (a: unknown, b: unknown) => cn(a).subtract(cn(b)));
+    env.assignImmutable("multiply", (a: unknown, b: unknown) => cn(a).multiply(cn(b)));
+    env.assignImmutable("divide", (a: unknown, b: unknown) => cn(a).divide(cn(b)));
+    env.assignImmutable("power", (a: unknown, b: unknown) => cn(a).power(cn(b)));
     env.assignImmutable("mod", (a: unknown, b: unknown) => {
       const x = cn(a).value;
       const y = cn(b).value;
@@ -185,25 +184,25 @@ export class StringEvaluator {
     });
 
     const unary: Record<string, (z: ComplexNumber) => ComplexNumber> = {
-      sin: ComplexMath.sine,
-      cos: ComplexMath.cosine,
-      tan: ComplexMath.tangent,
-      sqrt: ComplexMath.squareRoot,
-      exp: (z) => ComplexMath.power(ComplexMath.E, z),
-      ln: (z) => ComplexMath.logarithm(z),
-      log: (z) => ComplexMath.logarithm(z, 10),
-      abs: (z) => new ComplexNumber(ComplexMath.magnitude(z), 0),
-      conj: (z) => z.conj(),
+      sin: (z) => z.sine(),
+      cos: (z) => z.cosine(),
+      tan: (z) => z.tangent(),
+      sqrt: (z) => z.squareRoot(),
+      exp: (z) => ComplexNumber.E.power(z),
+      ln: (z) => z.logarithm(),
+      log: (z) => z.logarithm(10),
+      abs: (z) => new ComplexNumber(z.magnitude(), 0),
+      conj: (z) => z.conjugate(),
       neg: (z) => z.neg(),
     };
     for (const [name, fn] of Object.entries(unary)) {
       env.assignImmutable(name, (a: unknown) => fn(cn(a)));
     }
 
-    env.assignImmutable("pi", ComplexMath.PI);
-    env.assignImmutable("e", ComplexMath.E);
-    env.assignImmutable("i", ComplexMath.I);
-    env.assignImmutable("phi", ComplexMath.PHI);
+    env.assignImmutable("pi", ComplexNumber.PI);
+    env.assignImmutable("e", ComplexNumber.E);
+    env.assignImmutable("i", ComplexNumber.I);
+    env.assignImmutable("phi", ComplexNumber.PHI);
     return env;
   }
 }

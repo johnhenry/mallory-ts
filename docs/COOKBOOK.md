@@ -13,37 +13,39 @@ import { /* ... */ } from "mallory-ts";
 ## Complex numbers & Euler's identity
 
 ```ts
-import { ComplexMath, ComplexNumber } from "mallory-ts";
+import { ComplexNumber } from "mallory-ts";
 
-const eulers = ComplexMath.power(ComplexMath.E, new ComplexNumber(0, Math.PI));
+const eulers = ComplexNumber.E.power(new ComplexNumber(0, Math.PI));
 // eulers ≈ -1 + 0i
 ```
 
-See [`test/ComplexMath.test.ts`](../test/ComplexMath.test.ts).
+See [`test/ComplexNumber.test.ts`](../test/ComplexNumber.test.ts).
 
 ## Descriptive statistics
 
 ```ts
-import { RealMath, Vector } from "mallory-ts";
+import { Statistics, Vector } from "mallory-ts";
 
 const sample = Vector.fromArray([2, 4, 4, 4, 5, 5, 7, 9]);
-RealMath.mean(sample); // 5
-RealMath.variance(sample); // sample variance (n-1 denominator)
-RealMath.populationVariance(sample); // population variance (n denominator) = 4
+Statistics.mean(sample); // 5
+Statistics.variance(sample); // sample variance (n-1 denominator)
+Statistics.populationVariance(sample); // population variance (n denominator) = 4
 ```
 
 ## Numeric linear algebra basics
 
-For small dense matrices with a single number type, `RealMath`/`ComplexMath`
-provide direct matrix operations:
+For small dense matrices with a single number type, `Structure.realField()`
+(or `complexField()`) provides direct matrix operations — the same generic
+API used for arbitrary fields below:
 
 ```ts
-import { RealMath, Vector } from "mallory-ts";
+import { Structure, Vector } from "mallory-ts";
 
 const A = Vector.fromArray([Vector.fromArray([4, 3]), Vector.fromArray([6, 3])]);
-RealMath.determinant(A); // -6
-const inv = RealMath.invertMatrix(A); // partial pivoting, no divide-by-zero
-RealMath.multiplyMatrix(A, inv); // ≈ identity
+const real = Structure.realField();
+real.determinant(A); // -6
+const inv = real.invertMatrix(A); // partial pivoting, no divide-by-zero
+real.multiplyMatrix(A, inv); // ≈ identity
 ```
 
 ## Linear algebra over an arbitrary algebraic structure
@@ -110,13 +112,18 @@ with `mathEnvironment()`.
 
 ## Polynomials
 
-```ts
-import { Polynomial } from "mallory-ts";
+Real-number polynomials are `PolynomialRing(Structure.realField())`, plus two
+real-only helpers for the `"3*x^2-2*x+1"` string notation:
 
-const p = Polynomial.parse("x^2 + 2x + 1"); // parses toPolyString's own format
-p.evaluate(3); // 16
-p.derivative().evaluate(3); // 8
-Polynomial.divmod(p, Polynomial.parse("x + 1")); // long division: { quotient, remainder }
+```ts
+import { PolynomialRing, Structure, parsePolynomial, polynomialToString } from "mallory-ts";
+
+const R = new PolynomialRing(Structure.realField());
+const p = parsePolynomial("x^2 + 2x + 1"); // parses polynomialToString's own format
+R.evaluate(p, 3); // 16
+R.evaluate(R.derivative(p), 3); // 8
+R.divmod(p, parsePolynomial("x + 1")); // long division: { quotient, remainder }
+polynomialToString(p); // "1*x^2+2*x+1"
 ```
 
 ## Counting mathematics (combinatorics)
@@ -161,10 +168,9 @@ See [`test/Decimal.test.ts`](../test/Decimal.test.ts).
 
 ## Polynomials over arbitrary algebraic structures
 
-`PolynomialRing` generalizes `Polynomial` (which is `number`-only) to
-polynomials over any `Structure` — finite fields, the rationals, and so on —
-mirroring `GroupTheory`'s idiom of taking the algebra as a constructor
-parameter:
+`PolynomialRing` works over any `Structure` — finite fields, the rationals,
+real numbers (as in the recipe above), and so on — mirroring `GroupTheory`'s
+idiom of taking the algebra as a constructor parameter:
 
 ```ts
 import { PolynomialRing, Structure } from "mallory-ts";
@@ -187,21 +193,17 @@ rationals. See
 ## Symbolic calculus
 
 ```ts
-import { Symbolic, Calculus } from "mallory-ts";
+import { Symbolic } from "mallory-ts";
 
 Symbolic.toString(Symbolic.differentiate("x^3")); // "3*x^2"
 Symbolic.toString(Symbolic.integrate("cos(x)")); // "sin(x)"
 Symbolic.toString(Symbolic.taylor("exp(x)", "x", 0, 4)); // Taylor series about 0
 Symbolic.evaluate("x^2 + 1", { x: 3 }); // 10
-
-// or via the Calculus facade (string in, string out):
-Calculus.derivativeFunction("x^3"); // "3*x^2"
 ```
 
 Integration covers the elementary rules (power rule, `1/x`, linear-substitution
 `sin`/`cos`/`exp`); anything outside that set throws `NotIntegrableError`
 rather than returning a wrong answer — e.g. `Symbolic.integrate("sin(x^2)")`.
-`Calculus.solveFor` (equation solving) is a documented, intentional gap.
 
 ## Multivariable calculus
 
