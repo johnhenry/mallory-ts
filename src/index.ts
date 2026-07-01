@@ -33,6 +33,13 @@ export {
 export { IntegerMath } from "./IntegerMath.ts";
 export { IntUtils } from "./IntUtils.ts";
 export { Logic } from "./Logic.ts";
+export {
+  type EigenResult,
+  type LUResult,
+  MatrixMath,
+  type QRResult,
+  type SVDResult,
+} from "./MatrixMath.ts";
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
 export { Polynomial } from "./Polynomial.ts";
