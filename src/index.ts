@@ -8,6 +8,7 @@ export { Calculus, NotImplementedError } from "./Calculus.ts";
 export { ComplexMath } from "./ComplexMath.ts";
 export { ComplexNumber } from "./ComplexNumber.ts";
 export { Cycle } from "./Cycle.ts";
+export { DualNumber } from "./DualNumber.ts";
 // Expression evaluation
 export { Environment } from "./Environment.ts";
 export { Expression } from "./Expression.ts";
@@ -31,6 +32,7 @@ export {
 } from "./GraphUtils.ts";
 // Combinatorics & number theory
 export { IntegerMath } from "./IntegerMath.ts";
+export { Interval } from "./Interval.ts";
 export { IntUtils } from "./IntUtils.ts";
 export { Logic } from "./Logic.ts";
 export {
@@ -43,6 +45,8 @@ export {
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
 export { Polynomial } from "./Polynomial.ts";
+export { Quaternion } from "./Quaternion.ts";
+export { Rational } from "./Rational.ts";
 // Numeric cores
 export { RealMath } from "./RealMath.ts";
 export { SpecialOperator } from "./SpecialOperator.ts";

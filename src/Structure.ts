@@ -1,5 +1,8 @@
 import { ComplexMath } from "./ComplexMath.ts";
 import { ComplexNumber } from "./ComplexNumber.ts";
+import { DualNumber } from "./DualNumber.ts";
+import { Quaternion } from "./Quaternion.ts";
+import { Rational } from "./Rational.ts";
 import { Vector } from "./Vector.ts";
 import { type Matrix, VectorUtils } from "./VectorUtils.ts";
 
@@ -396,5 +399,40 @@ export class Structure<T = unknown> {
   /** The Boolean ring GF(2): XOR is addition, AND is multiplication (elements 0/1). */
   static booleanRing(): Structure<number> {
     return Structure.integersModulo(2);
+  }
+
+  /** The field of exact rational numbers ({@link Rational}). */
+  static rationalField(): Structure<Rational> {
+    return new Structure<Rational>({
+      criteria: [(x) => x instanceof Rational],
+      operations: [(a, b) => a.add(b), (a, b) => a.multiply(b)],
+      inverses: [(x) => x.negate(), (x) => x.reciprocal()],
+      identities: [Rational.Zero, Rational.One],
+      equality: (a, b) => a.equals(b),
+      wrap: (x) => Rational.from(x as number),
+    });
+  }
+
+  /** The (non-commutative) division ring of {@link Quaternion}s. */
+  static quaternionRing(): Structure<Quaternion> {
+    return new Structure<Quaternion>({
+      criteria: [(x) => x instanceof Quaternion],
+      operations: [(a, b) => a.add(b), (a, b) => a.multiply(b)],
+      inverses: [(x) => x.negate(), (x) => x.inverse()],
+      identities: [Quaternion.Zero, Quaternion.Identity],
+      equality: (a, b) => a.equals(b),
+    });
+  }
+
+  /** The commutative ring of {@link DualNumber}s (autodiff carrier). */
+  static dualNumbers(): Structure<DualNumber> {
+    return new Structure<DualNumber>({
+      criteria: [(x) => x instanceof DualNumber],
+      operations: [(a, b) => a.add(b), (a, b) => a.multiply(b)],
+      inverses: [(x) => x.negate(), (x) => new DualNumber(1, 0).divide(x)],
+      identities: [new DualNumber(0, 0), new DualNumber(1, 0)],
+      equality: (a, b) => a.value === b.value && a.deriv === b.deriv,
+      wrap: (x) => (x instanceof DualNumber ? x : DualNumber.constant(x as number)),
+    });
   }
 }
