@@ -37,6 +37,29 @@ export class Polynomial extends Vector<number> {
     return der;
   }
 
+  /** Evaluate the polynomial at `x` using Horner's method. */
+  evaluate(x: number): number {
+    let result = 0;
+    for (let i = this.length - 1; i >= 0; i--) result = result * x + (this[i] as number);
+    return result;
+  }
+
+  /** Add two polynomials (coefficient-wise, padding the shorter). */
+  static add(a: Polynomial, b: Polynomial): Polynomial {
+    const out = new Polynomial();
+    const n = Math.max(a.length, b.length);
+    for (let i = 0; i < n; i++) out[i] = (a[i] ?? 0) + (b[i] ?? 0);
+    return out;
+  }
+
+  /** Subtract polynomial `b` from `a` (coefficient-wise). */
+  static subtract(a: Polynomial, b: Polynomial): Polynomial {
+    const out = new Polynomial();
+    const n = Math.max(a.length, b.length);
+    for (let i = 0; i < n; i++) out[i] = (a[i] ?? 0) - (b[i] ?? 0);
+    return out;
+  }
+
   /** Multiply two polynomials (coefficient convolution). */
   static multiply(a: Polynomial, b: Polynomial): Polynomial {
     const product = new Polynomial();

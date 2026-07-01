@@ -72,6 +72,37 @@ export class Polygon extends Vector<Point> {
   }
 
   /**
+   * The area centroid (center of mass) as an `[x, y]` point. Complements
+   * {@link perimeter} and {@link area}. Falls back to the vertex average for a
+   * degenerate (zero-area) polygon.
+   */
+  centroid(): Point {
+    let signedArea = 0;
+    let cx = 0;
+    let cy = 0;
+    for (let i = 0; i < this.vertexCount; i++) {
+      const cur = this.vertex(i);
+      const next = this.vertex(i + 1);
+      const cross = (cur.x as number) * (next.y as number) - (next.x as number) * (cur.y as number);
+      signedArea += cross;
+      cx += ((cur.x as number) + (next.x as number)) * cross;
+      cy += ((cur.y as number) + (next.y as number)) * cross;
+    }
+    if (signedArea === 0) {
+      // Degenerate: average the vertices.
+      let sx = 0;
+      let sy = 0;
+      for (let i = 0; i < this.vertexCount; i++) {
+        sx += this.vertex(i).x as number;
+        sy += this.vertex(i).y as number;
+      }
+      const n = this.vertexCount || 1;
+      return Vector.fromArray([sx / n, sy / n]);
+    }
+    return Vector.fromArray([cx / (3 * signedArea), cy / (3 * signedArea)]);
+  }
+
+  /**
    * Interior angle (radians) at vertex `i`, via the law of cosines
    * (bug fix: the AS3 method always returned 0).
    */

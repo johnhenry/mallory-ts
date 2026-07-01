@@ -112,6 +112,23 @@ export class ComplexNumber {
     return new ComplexNumber(num, 0);
   }
 
+  /** Build a complex number from polar form `r·e^(iθ)` (inverse of magnitude/angle). */
+  static fromPolar(magnitude: number, angle: number): ComplexNumber {
+    return new ComplexNumber(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
+  }
+
+  /** Build a complex number from a `[re, im]` vector-like (inverse of {@link toVector}). */
+  static fromVector(coordinates: ArrayLike<number>): ComplexNumber {
+    return new ComplexNumber(coordinates[0] ?? 0, coordinates[1] ?? 0);
+  }
+
+  /** Parse the `<complexNumber>` form produced by {@link toXML} (inverse of it). */
+  static fromXML(xml: string): ComplexNumber {
+    const re = /<value>(.*?)<\/value>/.exec(xml);
+    const im = /<iValue>(.*?)<\/iValue>/.exec(xml);
+    return new ComplexNumber(re ? Number(re[1]) : NaN, im ? Number(im[1]) : NaN);
+  }
+
   /**
    * Parse a string such as `"3"`, `"-2*i"`, `"i"`, `"3+2*i"`, `"3-2i"`.
    * The `*` between coefficient and `i` is optional. Whitespace is ignored.
