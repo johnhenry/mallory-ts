@@ -27,6 +27,8 @@ export class Vector<T = unknown> extends Array<T> {
    * on via `Symbol.species` when they allocate result vectors. Use
    * {@link Vector.of} or {@link Vector.from} to wrap a literal single number.
    */
+  constructor(length: number);
+  constructor(...rest: T[]);
   constructor(...rest: T[]) {
     // Reproduce Array's constructor contract: a lone number means "length".
     if (rest.length === 1 && typeof rest[0] === "number") {
