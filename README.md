@@ -113,6 +113,28 @@ the AS3 library never had:
   gf7.invertMatrix(/* a matrix over GF(7) */); // Gauss-Jordan over the finite field
   ```
 
+## Expanded mathematics
+
+Well beyond the original ActionScript scope, the library now spans:
+
+| Area | Module(s) | Highlights |
+|------|-----------|------------|
+| Numerical linear algebra | `MatrixMath` | LU, QR, Cholesky, symmetric eigen (Jacobi), SVD; `solve`, RREF, rank, null space, least squares, pseudo-inverse, norms, condition number |
+| Symbolic calculus | `Symbolic`, `Calculus` | expression parser, symbolic differentiation, algebraic simplification, elementary integration, Taylor series |
+| Number types | `Rational`, `Quaternion`, `DualNumber`, `Interval` | exact bigint rationals, 3D-rotation quaternions, forward-mode autodiff, rigorous interval arithmetic — each also a `Structure` preset |
+| Number theory | `NumberTheory` | `bigint` modPow, extended GCD, CRT, Miller–Rabin, Pollard-rho factorization, Legendre/Jacobi |
+| Group theory | `GroupTheory` | Cayley tables, axiom checks, element order, generated subgroups, cosets, Lagrange, orbits, Sₙ/Zₙ |
+| Numerical methods | `Numerical` | bisection/secant/Newton/Brent; Simpson, adaptive Simpson, Gauss–Legendre; Euler & RK4 ODE solvers |
+| Probability & special functions | `SpecialFunctions`, `Distributions` | gamma/beta/erf, incomplete gamma/beta; normal/exponential/uniform/gamma/χ²/t/binomial/Poisson; t-tests, χ² GoF, CIs |
+| Signal processing | `FFT` | radix-2 FFT/IFFT, DFT, FFT convolution |
+| Computational geometry | `Geometry`, `Transform2D` | convex hull, predicates, point-in-polygon, 2D affine transforms |
+| Graph theory | `Graph` | BFS/DFS, Dijkstra, Kruskal MST, topological sort, components, Floyd–Warshall |
+
+Many of these interlock: `GroupTheory` runs over any `Structure` (including
+`integersModulo`); `Graph.floydWarshall` emits matrices for `MatrixMath`;
+`DualNumber` gives exact derivatives; and `SpecialFunctions` gives the
+`Distributions` CDFs exact closed forms.
+
 ## License
 
 MIT
