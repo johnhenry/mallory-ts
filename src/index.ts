@@ -30,6 +30,7 @@ export {
   type Placement2D,
   type StrokeStyle,
 } from "./GraphUtils.ts";
+export { GroupTheory } from "./GroupTheory.ts";
 // Combinatorics & number theory
 export { IntegerMath } from "./IntegerMath.ts";
 export { Interval } from "./Interval.ts";
@@ -42,6 +43,7 @@ export {
   type QRResult,
   type SVDResult,
 } from "./MatrixMath.ts";
+export { NumberTheory } from "./NumberTheory.ts";
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
 export { Polynomial } from "./Polynomial.ts";
