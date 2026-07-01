@@ -10,8 +10,8 @@ import { Vector } from "./Vector.ts";
  * strings such as `"3+4*2"`, `"sin(pi/2)"` or `"[1,2,3]"`. Ported from Mallory's
  * ActionScript `StringEvaluator`.
  *
- * Operator precedence follows the AS3 design (encoded by {@link operatorList}
- * order): `%` binds loosest, then `+`, `-`, `*`, `/`, and `^` binds tightest.
+ * Operator precedence follows the AS3 design (encoded by the internal operator
+ * list order): `%` binds loosest, then `+`, `-`, `*`, `/`, and `^` binds tightest.
  *
  * Bug fixes from the AS3 original:
  *  - Associativity: the AS3 splitter was uniformly right-associative, so

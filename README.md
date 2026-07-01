@@ -29,10 +29,19 @@ npm run check      # Biome lint + format check
 npm run check:fix  # apply Biome fixes
 npm run build      # emit ./dist (ESM + .d.ts)
 npm run test:build # build, then smoke-test the emitted package
+npm run docs       # generate the API reference into docs/api (TypeDoc)
 ```
 
 Continuous integration (`.github/workflows/ci.yml`) runs typecheck → lint →
-tests → build → dist smoke test on Node 22 and 24.
+tests → build → dist smoke test → docs build on Node 22 and 24.
+
+**Documentation:**
+
+- **[Cookbook](docs/COOKBOOK.md)** — task-oriented recipes across every
+  domain (linear algebra, symbolic calculus, number theory, group theory,
+  FFT, geometry, graphs, and more), each one verified against the test suite.
+- **API reference** — generated with [TypeDoc](https://typedoc.org) from
+  the source JSDoc; run `npm run docs` and open `docs/api/index.html`.
 
 ## Modules
 
