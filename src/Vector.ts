@@ -37,7 +37,7 @@ export class Vector<T = unknown> extends Array<T> {
   }
 
   /** Ensure `map`/`filter`/`slice`/etc. produce plain `Vector`s, not typed views. */
-  static get [Symbol.species](): ArrayConstructor {
+  static override get [Symbol.species](): ArrayConstructor {
     return Array as unknown as ArrayConstructor;
   }
 
