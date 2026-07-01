@@ -8,6 +8,13 @@ export { Calculus, NotImplementedError } from "./Calculus.ts";
 export { ComplexMath } from "./ComplexMath.ts";
 export { ComplexNumber } from "./ComplexNumber.ts";
 export { Cycle } from "./Cycle.ts";
+export {
+  type ContinuousDistribution,
+  type DiscreteDistribution,
+  Distributions,
+  HypothesisTests,
+  type TestResult,
+} from "./Distributions.ts";
 export { DualNumber } from "./DualNumber.ts";
 // Expression evaluation
 export { Environment } from "./Environment.ts";
@@ -44,6 +51,7 @@ export {
   type SVDResult,
 } from "./MatrixMath.ts";
 export { NumberTheory } from "./NumberTheory.ts";
+export { Numerical, type ODEStep } from "./Numerical.ts";
 export { Permutation } from "./Permutation.ts";
 export { Polygon } from "./Polygon.ts";
 export { Polynomial } from "./Polynomial.ts";
@@ -51,6 +59,7 @@ export { Quaternion } from "./Quaternion.ts";
 export { Rational } from "./Rational.ts";
 // Numeric cores
 export { RealMath } from "./RealMath.ts";
+export { SpecialFunctions } from "./SpecialFunctions.ts";
 export { SpecialOperator } from "./SpecialOperator.ts";
 export { StringEvaluator } from "./StringEvaluator.ts";
 export { StringVarMath } from "./StringVarMath.ts";
