@@ -1,10 +1,10 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
-import { ComplexNumber } from "../src/ComplexNumber.ts";
+import { test } from "node:test";
 import { ComplexMath } from "../src/ComplexMath.ts";
-import { Polynomial } from "../src/Polynomial.ts";
+import { ComplexNumber } from "../src/ComplexNumber.ts";
 import { Polygon } from "../src/Polygon.ts";
+import { Polynomial } from "../src/Polynomial.ts";
+import { Vector } from "../src/Vector.ts";
 
 const close = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) <= eps;
 const pt = (...xs: number[]) => Vector.fromArray(xs);

@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { StringVarMath } from "../src/StringVarMath.ts";
 
 test("negative toggles a leading minus", () => {

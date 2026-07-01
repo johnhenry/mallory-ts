@@ -1,8 +1,8 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
+import { ComplexNumber } from "../src/ComplexNumber.ts";
 import { Type } from "../src/Type.ts";
 import { Vector } from "../src/Vector.ts";
-import { ComplexNumber } from "../src/ComplexNumber.ts";
 
 test("classifies numbers and complex numbers", () => {
   assert.equal(Type.getType(5), Type.NUMBER);
@@ -20,5 +20,8 @@ test("classifies booleans, errors, non-numeric strings, functions", () => {
   assert.equal(Type.getType(true), Type.BOOLEAN);
   assert.equal(Type.getType(new Error("x")), Type.ERROR);
   assert.equal(Type.getType("hello"), Type.ERROR);
-  assert.equal(Type.getType(() => 1), Type.FUNCTION);
+  assert.equal(
+    Type.getType(() => 1),
+    Type.FUNCTION,
+  );
 });

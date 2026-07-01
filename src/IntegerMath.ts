@@ -121,7 +121,7 @@ export class IntegerMath {
   }
 
   static power(alpha: number, beta: number): number {
-    return Math.pow(alpha, beta);
+    return alpha ** beta;
   }
 
   // -- Section 4: factors & primes -----------------------------------------

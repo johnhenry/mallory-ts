@@ -43,9 +43,6 @@ export class Expression {
     for (let i = 0; i < this._indeVars.length; i++) {
       subEnvironment.assign(this._indeVars[i] as string, args[i]);
     }
-    return StringEvaluator.evaluate(
-      StringEvaluator.evaluate(this._representation, subEnvironment),
-      environment,
-    );
+    return StringEvaluator.evaluate(StringEvaluator.evaluate(this._representation, subEnvironment), environment);
   }
 }

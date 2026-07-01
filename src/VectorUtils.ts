@@ -57,11 +57,7 @@ export class VectorUtils {
   }
 
   /** True when `element` is present, optionally by a custom equality function. */
-  static contains<T>(
-    vector: Vector<T>,
-    element: T,
-    equalityFunction?: Binary<T, T, boolean>,
-  ): boolean {
+  static contains<T>(vector: Vector<T>, element: T, equalityFunction?: Binary<T, T, boolean>): boolean {
     if (!equalityFunction) return vector.lastIndexOf(element) !== -1;
     for (const i of vector) {
       if (equalityFunction(element, i)) return true;
@@ -79,10 +75,7 @@ export class VectorUtils {
     return alpha.length >= beta.length ? beta : alpha;
   }
 
-  static isNotMultiDimensional(
-    vector: Vector<unknown>,
-    vectorCriterion?: Predicate<unknown>,
-  ): boolean {
+  static isNotMultiDimensional(vector: Vector<unknown>, vectorCriterion?: Predicate<unknown>): boolean {
     return !VectorUtils.isMultiDimensional(vector, vectorCriterion ?? VectorUtils.isVector);
   }
 
@@ -215,10 +208,17 @@ export class VectorUtils {
   static fromOEIS(selection = 1): Vector<number> {
     let vectorString: string;
     switch (selection) {
-      case 1: vectorString = "1,2,3"; break;
-      case 2: vectorString = "4,5,6"; break;
-      case 3: vectorString = "7,8,9"; break;
-      default: vectorString = "0,0,0";
+      case 1:
+        vectorString = "1,2,3";
+        break;
+      case 2:
+        vectorString = "4,5,6";
+        break;
+      case 3:
+        vectorString = "7,8,9";
+        break;
+      default:
+        vectorString = "0,0,0";
     }
     return VectorUtils.transform(Vector.fromArray(vectorString.split(",")), (s) => parseInt(s, 10));
   }
@@ -354,7 +354,7 @@ export class VectorUtils {
 
   /** Flatten one level of a vector whose elements share the same depth. */
   static flattenSD(vector: Vector<unknown>): Vector<unknown> {
-    let out = vector.clone();
+    const out = vector.clone();
     if (out.length === 0) return new Vector<unknown>();
     if (!(out[0] instanceof Vector)) return out;
 
@@ -431,11 +431,7 @@ export class VectorUtils {
   }
 
   /** Reduce a vector to a single value via a binary operation (left fold). */
-  static collapse<T>(
-    vector: Vector<T>,
-    binaryOperation: Binary<T, T, T>,
-    defaultObject: T | null = null,
-  ): T | null {
+  static collapse<T>(vector: Vector<T>, binaryOperation: Binary<T, T, T>, defaultObject: T | null = null): T | null {
     const work = vector.clone();
     if (work.length === 0) return defaultObject;
     let acc = work[0] as T;
@@ -588,9 +584,7 @@ export class VectorUtils {
   }
 
   static columnInserted<T>(target: Matrix<T>, inserted: Vector<T>, index = -1): Matrix<T> {
-    return VectorUtils.transpose(
-      VectorUtils.rowInserted(VectorUtils.transpose(target), inserted, index),
-    );
+    return VectorUtils.transpose(VectorUtils.rowInserted(VectorUtils.transpose(target), inserted, index));
   }
 
   static mergeRows<T>(vectorA: Vector<T>, vectorB: Vector<T>): Matrix<T> {
@@ -647,7 +641,9 @@ export class VectorUtils {
           currentMatrix = (M[i] as Vector<Matrix<T>>)[j] as Matrix<T>;
           for (let iPrime = 0; iPrime < VectorUtils.height(currentMatrix); iPrime++) {
             for (let jPrime = 0; jPrime < VectorUtils.width(currentMatrix); jPrime++) {
-              (broken[currentHeight + iPrime] as Vector<T>)[currentWidth + jPrime] = (currentMatrix[iPrime] as Vector<T>)[jPrime] as T;
+              (broken[currentHeight + iPrime] as Vector<T>)[currentWidth + jPrime] = (
+                currentMatrix[iPrime] as Vector<T>
+              )[jPrime] as T;
             }
           }
           currentWidth += VectorUtils.width(currentMatrix);
@@ -690,9 +686,12 @@ export class VectorUtils {
       }
     }
     if (top) out = VectorUtils.rowInserted(out, VectorUtils.constantVector(VectorUtils.width(out), element as T), 0);
-    if (bottom) out = VectorUtils.rowInserted(out, VectorUtils.constantVector(VectorUtils.width(out), element as T), -1);
-    if (left) out = VectorUtils.columnInserted(out, VectorUtils.constantVector(VectorUtils.height(out), element as T), 0);
-    if (right) out = VectorUtils.columnInserted(out, VectorUtils.constantVector(VectorUtils.height(out), element as T), -1);
+    if (bottom)
+      out = VectorUtils.rowInserted(out, VectorUtils.constantVector(VectorUtils.width(out), element as T), -1);
+    if (left)
+      out = VectorUtils.columnInserted(out, VectorUtils.constantVector(VectorUtils.height(out), element as T), 0);
+    if (right)
+      out = VectorUtils.columnInserted(out, VectorUtils.constantVector(VectorUtils.height(out), element as T), -1);
     return out;
   }
 
@@ -767,7 +766,7 @@ export class VectorUtils {
     }
 
     const rowStrings = cells.map((row) => leftBracket + row.join(seperator) + rightBracket);
-    const fullRowSep = rowSeperator + "\r" + " ".repeat(openingBracket.length);
+    const fullRowSep = `${rowSeperator}\r${" ".repeat(openingBracket.length)}`;
     return openingBracket + rowStrings.join(fullRowSep) + closingBracket;
   }
 }

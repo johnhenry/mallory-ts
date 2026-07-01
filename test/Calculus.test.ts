@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { Calculus, NotImplementedError } from "../src/Calculus.ts";
 
 test("unimplemented methods throw NotImplementedError", () => {

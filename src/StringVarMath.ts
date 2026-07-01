@@ -11,7 +11,7 @@ export class StringVarMath {
   /** Negate an expression, cancelling a leading unary minus. */
   static negative(element: string): string {
     if (element.charAt(0) === "-") return element.substr(1);
-    return "-" + element;
+    return `-${element}`;
   }
 
   /** Add two expressions, dropping additive-identity (`0`) terms. */

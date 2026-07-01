@@ -130,7 +130,10 @@ export class Polynomial extends Vector<number> {
       p.push(0);
       return p;
     }
-    const terms = s.replace(/-/g, "+-").split("+").filter((t) => t !== "");
+    const terms = s
+      .replace(/-/g, "+-")
+      .split("+")
+      .filter((t) => t !== "");
     for (const term of terms) {
       let coef: number;
       let exp: number;

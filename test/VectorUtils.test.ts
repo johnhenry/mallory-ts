@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { Vector } from "../src/Vector.ts";
 import { VectorUtils as VU } from "../src/VectorUtils.ts";
 
@@ -22,7 +22,10 @@ test("isMultiDimensional / isFlat", () => {
 test("contains with and without equality fn", () => {
   assert.equal(VU.contains(v(1, 2, 3), 2), true);
   assert.equal(VU.contains(v(1, 2, 3), 9), false);
-  assert.equal(VU.contains(v(1, 2, 3), 4, (a, b) => Math.abs(a - b) <= 1), true);
+  assert.equal(
+    VU.contains(v(1, 2, 3), 4, (a, b) => Math.abs(a - b) <= 1),
+    true,
+  );
 });
 
 test("longer / shorter with tie rules", () => {
@@ -53,7 +56,10 @@ test("geometricSequence", () => {
 
 test("constantVector / constantMatrix", () => {
   assert.deepEqual([...VU.constantVector(3, 7)], [7, 7, 7]);
-  assert.deepEqual(deep(VU.constantMatrix(2, 2, 0)), [[0, 0], [0, 0]]);
+  assert.deepEqual(deep(VU.constantMatrix(2, 2, 0)), [
+    [0, 0],
+    [0, 0],
+  ]);
 });
 
 test("merge: two vectors, vector+scalar, scalar+vector (bug fix), two scalars", () => {
@@ -88,9 +94,18 @@ test("transform / replace / fillByIndex", () => {
 });
 
 test("transformEndNodes / replaceEndNodes recurse", () => {
-  const nested = mat([[1, 2], [3, 4]]);
-  assert.deepEqual(deep(VU.transformEndNodes(nested, (x) => (x as number) + 10) as Vector<unknown>), [[11, 12], [13, 14]]);
-  assert.deepEqual(deep(VU.replaceEndNodes(nested, 0) as Vector<unknown>), [[0, 0], [0, 0]]);
+  const nested = mat([
+    [1, 2],
+    [3, 4],
+  ]);
+  assert.deepEqual(deep(VU.transformEndNodes(nested, (x) => (x as number) + 10) as Vector<unknown>), [
+    [11, 12],
+    [13, 14],
+  ]);
+  assert.deepEqual(deep(VU.replaceEndNodes(nested, 0) as Vector<unknown>), [
+    [0, 0],
+    [0, 0],
+  ]);
 });
 
 test("trim / removeElements / filter", () => {
@@ -111,10 +126,19 @@ test("flatten ragged / flattenSD", () => {
 });
 
 test("collapse (sum) and count/matches", () => {
-  assert.equal(VU.collapse(v(1, 2, 3, 4), (a, b) => a + b), 10);
-  assert.equal(VU.collapse(v<number>(), (a, b) => a + b, -1), -1);
+  assert.equal(
+    VU.collapse(v(1, 2, 3, 4), (a, b) => a + b),
+    10,
+  );
+  assert.equal(
+    VU.collapse(v<number>(), (a, b) => a + b, -1),
+    -1,
+  );
   assert.equal(VU.count(v(1, 0, 1, 0, 1), 0), 2, "counts stored zeros correctly");
-  assert.equal(VU.matches(v(1, 2, 3, 4), (x) => x > 2), 2);
+  assert.equal(
+    VU.matches(v(1, 2, 3, 4), (x) => x > 2),
+    2,
+  );
 });
 
 test("combine with default handles stored zeros (bug fix)", () => {
@@ -127,49 +151,109 @@ test("combine with default handles stored zeros (bug fix)", () => {
 });
 
 test("consecutiveMatches", () => {
-  assert.deepEqual(VU.consecutiveMatches(v(1, 1, 0, 1, 1, 1, 0), (x) => x === 1), [2, 3]);
+  assert.deepEqual(
+    VU.consecutiveMatches(v(1, 1, 0, 1, 1, 1, 0), (x) => x === 1),
+    [2, 3],
+  );
 });
 
 test("isMatrix", () => {
-  assert.equal(VU.isMatrix(mat([[1, 2], [3, 4]])), true);
+  assert.equal(
+    VU.isMatrix(
+      mat([
+        [1, 2],
+        [3, 4],
+      ]),
+    ),
+    true,
+  );
   assert.equal(VU.isMatrix(mat([[1, 2], [3]])), false);
   assert.equal(VU.isMatrix(v(1, 2, 3)), false);
 });
 
 test("width / height", () => {
-  const m = mat([[1, 2, 3], [4, 5, 6]]);
+  const m = mat([
+    [1, 2, 3],
+    [4, 5, 6],
+  ]);
   assert.equal(VU.height(m), 2);
   assert.equal(VU.width(m), 3);
 });
 
 test("transpose", () => {
-  assert.deepEqual(deep(VU.transpose(mat([[1, 2, 3], [4, 5, 6]]))), [[1, 4], [2, 5], [3, 6]]);
+  assert.deepEqual(
+    deep(
+      VU.transpose(
+        mat([
+          [1, 2, 3],
+          [4, 5, 6],
+        ]),
+      ),
+    ),
+    [
+      [1, 4],
+      [2, 5],
+      [3, 6],
+    ],
+  );
 });
 
 test("generateIdentity", () => {
-  assert.deepEqual(deep(VU.generateIdentity(3, 3, 1, 0)), [[1, 0, 0], [0, 1, 0], [0, 0, 1]]);
+  assert.deepEqual(deep(VU.generateIdentity(3, 3, 1, 0)), [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+  ]);
 });
 
 test("getRow / getColumn", () => {
-  const m = mat([[1, 2], [3, 4]]);
+  const m = mat([
+    [1, 2],
+    [3, 4],
+  ]);
   assert.deepEqual(deep(VU.getRow(m, 1)), [[3, 4]]);
   assert.deepEqual(deep(VU.getColumn(m, 0)), [[1], [3]]);
 });
 
 test("rowRemoved / columnRemoved", () => {
-  const m = mat([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
-  assert.deepEqual(deep(VU.rowRemoved(m, 1)), [[1, 2, 3], [7, 8, 9]]);
-  assert.deepEqual(deep(VU.columnRemoved(m, 1)), [[1, 3], [4, 6], [7, 9]]);
+  const m = mat([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+  ]);
+  assert.deepEqual(deep(VU.rowRemoved(m, 1)), [
+    [1, 2, 3],
+    [7, 8, 9],
+  ]);
+  assert.deepEqual(deep(VU.columnRemoved(m, 1)), [
+    [1, 3],
+    [4, 6],
+    [7, 9],
+  ]);
 });
 
 test("rowInserted / columnInserted", () => {
-  const m = mat([[1, 2], [5, 6]]);
-  assert.deepEqual(deep(VU.rowInserted(m, v(3, 4), 1)), [[1, 2], [3, 4], [5, 6]]);
-  assert.deepEqual(deep(VU.columnInserted(m, v(9, 9), 1)), [[1, 9, 2], [5, 9, 6]]);
+  const m = mat([
+    [1, 2],
+    [5, 6],
+  ]);
+  assert.deepEqual(deep(VU.rowInserted(m, v(3, 4), 1)), [
+    [1, 2],
+    [3, 4],
+    [5, 6],
+  ]);
+  assert.deepEqual(deep(VU.columnInserted(m, v(9, 9), 1)), [
+    [1, 9, 2],
+    [5, 9, 6],
+  ]);
 });
 
 test("diagonal / minorDiagonal", () => {
-  const m = mat([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+  const m = mat([
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+  ]);
   assert.deepEqual([...VU.diagonal(m)], [1, 5, 9]);
   assert.deepEqual([...VU.diagonal(m, 1)], [2, 6]);
   assert.deepEqual([...VU.minorDiagonal(m)], [3, 5, 7]);
@@ -177,7 +261,10 @@ test("diagonal / minorDiagonal", () => {
 
 test("placeBlock overlays a block", () => {
   const target = VU.constantMatrix(3, 3, 0);
-  const block = mat([[1, 1], [1, 1]]);
+  const block = mat([
+    [1, 1],
+    [1, 1],
+  ]);
   assert.deepEqual(deep(VU.placeBlock(target, block, 1, 1)), [
     [0, 0, 0],
     [0, 1, 1],
@@ -186,7 +273,12 @@ test("placeBlock overlays a block", () => {
 });
 
 test("matrixString renders rows", () => {
-  const s = VU.matrixString(mat([[1, 2], [3, 4]]));
+  const s = VU.matrixString(
+    mat([
+      [1, 2],
+      [3, 4],
+    ]),
+  );
   assert.ok(s.includes("[1,2]"));
   assert.ok(s.includes("[3,4]"));
 });

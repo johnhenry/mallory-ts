@@ -1,7 +1,7 @@
-import { Vector } from "./Vector.ts";
-import { VectorUtils } from "./VectorUtils.ts";
-import { RealMath } from "./RealMath.ts";
 import type { Polygon } from "./Polygon.ts";
+import { RealMath } from "./RealMath.ts";
+import type { Vector } from "./Vector.ts";
+import { VectorUtils } from "./VectorUtils.ts";
 
 /**
  * Graph3DUtils — helpers for turning functions and points into 3D mesh data.
@@ -183,7 +183,15 @@ export class Graph3DUtils {
   static vectorTo3DPrism(points: Vector<Vector<number>>, color = 0, alpha = 1, planeThickness = 1): Mesh[] {
     const out: Mesh[] = [];
     for (let i = 0; i < points.length - 1; i++) {
-      out.push(Graph3DUtils.create3DPrism(points[i] as Vector<number>, points[i + 1] as Vector<number>, color, alpha, planeThickness));
+      out.push(
+        Graph3DUtils.create3DPrism(
+          points[i] as Vector<number>,
+          points[i + 1] as Vector<number>,
+          color,
+          alpha,
+          planeThickness,
+        ),
+      );
     }
     return out;
   }
@@ -217,13 +225,18 @@ export class Graph3DUtils {
   ): Mesh[] {
     const width = VectorUtils.width(vector as never);
     const height = VectorUtils.height(vector as never);
-    const at = (i: number, j: number): Vector<number> | undefined => (vector[i] as Vector<Vector<number>> | undefined)?.[j];
+    const at = (i: number, j: number): Vector<number> | undefined =>
+      (vector[i] as Vector<Vector<number>> | undefined)?.[j];
 
     const faces1: Face[] = [];
     for (let i = 0; i < width - 1; i++) {
       for (let j = 0; j < height - 1; j++) {
         if (at(i, j) && vector[i + 1] && at(i, j + 1)) {
-          faces1.push([asPoint(at(i, j) as Vector<number>), asPoint(at(i + 1, j) as Vector<number>), asPoint(at(i, j + 1) as Vector<number>)]);
+          faces1.push([
+            asPoint(at(i, j) as Vector<number>),
+            asPoint(at(i + 1, j) as Vector<number>),
+            asPoint(at(i, j + 1) as Vector<number>),
+          ]);
         }
       }
     }
@@ -232,7 +245,11 @@ export class Graph3DUtils {
     for (let i = 1; i < width; i++) {
       for (let j = 1; j < height; j++) {
         if (at(i, j) && vector[i - 1] && at(i, j - 1)) {
-          faces2.push([asPoint(at(i, j) as Vector<number>), asPoint(at(i - 1, j) as Vector<number>), asPoint(at(i, j - 1) as Vector<number>)]);
+          faces2.push([
+            asPoint(at(i, j) as Vector<number>),
+            asPoint(at(i - 1, j) as Vector<number>),
+            asPoint(at(i, j - 1) as Vector<number>),
+          ]);
         }
       }
     }

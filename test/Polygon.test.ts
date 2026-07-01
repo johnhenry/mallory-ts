@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
+import { test } from "node:test";
 import { Polygon } from "../src/Polygon.ts";
+import { Vector } from "../src/Vector.ts";
 
 const pt = (x: number, y: number) => Vector.fromArray([x, y]);
 const close = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) <= eps;

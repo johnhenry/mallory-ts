@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
+import { test } from "node:test";
 import { Structure } from "../src/Structure.ts";
+import { Vector } from "../src/Vector.ts";
 
 const v = (...xs: number[]) => Vector.fromArray(xs);
 const mat = (rows: number[][]) => Vector.fromArray(rows.map((r) => Vector.fromArray(r)));
@@ -24,8 +24,8 @@ const modInverse = (x: number): number => {
   return ((r % P) + P) % P;
 };
 const gf7 = new Structure<number>({
-  operations: [(a, b) => ((a + b) % P + P) % P, (a, b) => ((a * b) % P + P) % P],
-  inverses: [(x) => ((P - x) % P + P) % P, (x) => modInverse(x)],
+  operations: [(a, b) => (((a + b) % P) + P) % P, (a, b) => (((a * b) % P) + P) % P],
+  inverses: [(x) => (((P - x) % P) + P) % P, (x) => modInverse(x)],
   identities: [0, 1],
   equality: (a, b) => ((a % P) + P) % P === ((b % P) + P) % P,
 });
@@ -52,20 +52,52 @@ test("vector ops over the real field", () => {
 });
 
 test("matrix ops over the real field", () => {
-  const a = mat([[1, 2], [3, 4]]);
-  const b = mat([[5, 6], [7, 8]]);
-  assert.deepEqual(deep(realField.addMatrix(a, b)), [[6, 8], [10, 12]]);
-  assert.deepEqual(deep(realField.multiplyMatrix(a, b)), [[19, 22], [43, 50]]);
+  const a = mat([
+    [1, 2],
+    [3, 4],
+  ]);
+  const b = mat([
+    [5, 6],
+    [7, 8],
+  ]);
+  assert.deepEqual(deep(realField.addMatrix(a, b)), [
+    [6, 8],
+    [10, 12],
+  ]);
+  assert.deepEqual(deep(realField.multiplyMatrix(a, b)), [
+    [19, 22],
+    [43, 50],
+  ]);
   assert.equal(realField.determinant(a), -2);
   assert.equal(realField.trace(a), 5);
-  assert.deepEqual(deep(realField.powerMatrix(mat([[1, 1], [0, 1]]), 3)), [[1, 3], [0, 1]]);
+  assert.deepEqual(
+    deep(
+      realField.powerMatrix(
+        mat([
+          [1, 1],
+          [0, 1],
+        ]),
+        3,
+      ),
+    ),
+    [
+      [1, 3],
+      [0, 1],
+    ],
+  );
 });
 
 test("invertMatrix over the real field", () => {
-  const a = mat([[4, 7], [2, 6]]);
+  const a = mat([
+    [4, 7],
+    [2, 6],
+  ]);
   const inv = realField.invertMatrix(a);
   const prod = realField.multiplyMatrix(a, inv).map((r) => (r as Vector<number>).map((x) => Math.round(x)));
-  assert.deepEqual(deep(prod as Vector<unknown>), [[1, 0], [0, 1]]);
+  assert.deepEqual(deep(prod as Vector<unknown>), [
+    [1, 0],
+    [0, 1],
+  ]);
 });
 
 test("Structure works over the finite field GF(7)", () => {
@@ -74,7 +106,10 @@ test("Structure works over the finite field GF(7)", () => {
   assert.equal(gf7.multiply(3, 5), 1); // 15 mod 7
   assert.equal(gf7.reciprocal(3), 5, "3*5 = 15 = 1 mod 7");
   // matrix inverse over GF(7): A * A^-1 = I (mod 7)
-  const a = mat([[2, 3], [1, 4]]);
+  const a = mat([
+    [2, 3],
+    [1, 4],
+  ]);
   const inv = gf7.invertMatrix(a);
   const prod = gf7.multiplyMatrix(a, inv);
   assert.equal(gf7.equality((prod[0] as Vector<number>)[0], 1), true);

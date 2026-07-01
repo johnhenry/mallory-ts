@@ -19,7 +19,7 @@ export class Utilities {
     if (value >= Number.MAX_VALUE) return Number.POSITIVE_INFINITY;
     if (value <= -Number.MAX_VALUE) return Number.NEGATIVE_INFINITY;
     if (Math.abs(value) <= Number.MIN_VALUE) return 0;
-    const factor = Math.pow(10, precision);
+    const factor = 10 ** precision;
     return Math.round(value * factor) / factor;
   }
 
@@ -43,7 +43,7 @@ export class Utilities {
 
   /** True when `value` is (loosely) equal to a member of `group`. */
   static isMember(value: unknown, group: readonly unknown[]): boolean {
-    // eslint-disable-next-line eqeqeq -- faithful to AS3 `==` semantics
+    // biome-ignore lint/suspicious/noDoubleEquals: faithful to AS3 loose `==` coercion semantics
     return group.some((i) => value == i);
   }
 }

@@ -1,6 +1,6 @@
-import { Vector } from "./Vector.ts";
-import { VectorUtils } from "./VectorUtils.ts";
 import type { Polygon } from "./Polygon.ts";
+import type { Vector } from "./Vector.ts";
+import { VectorUtils } from "./VectorUtils.ts";
 
 /**
  * GraphUtils — helpers for turning functions and points into 2D drawing data.
@@ -60,12 +60,7 @@ const point = (p: Vector<number>) => ({ x: p.x as number, y: p.y as number, z: p
 
 export class GraphUtils {
   /** Sample `unaryOperation` across `[xMin, xMax]` in `xStep` increments. */
-  static singleRangeVector<T>(
-    unaryOperation: (x: number) => T,
-    xMin = -10,
-    xMax = 10,
-    xStep = 1,
-  ): Vector<T> {
+  static singleRangeVector<T>(unaryOperation: (x: number) => T, xMin = -10, xMax = 10, xStep = 1): Vector<T> {
     const xValues = VectorUtils.arithmeticSequence(xMin, xMax, xStep);
     return VectorUtils.transform(xValues, unaryOperation);
   }
@@ -92,7 +87,10 @@ export class GraphUtils {
     return { x, y: 0, width: barWidth, height: y, scaleY: y < 0 ? -1 : 1 };
   }
 
-  static placements(points: Vector<Vector<number>>, altProperties: string[] | null = null): Array<Placement2D | Record<string, number>> {
+  static placements(
+    points: Vector<Vector<number>>,
+    altProperties: string[] | null = null,
+  ): Array<Placement2D | Record<string, number>> {
     return [...points].map((p) => GraphUtils.placement(p, altProperties));
   }
 

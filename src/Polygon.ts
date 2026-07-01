@@ -1,6 +1,6 @@
-import { Vector } from "./Vector.ts";
 import { IntegerMath } from "./IntegerMath.ts";
 import { RealMath } from "./RealMath.ts";
+import { Vector } from "./Vector.ts";
 
 /** A 2D point stored as a {@link Vector} `[x, y]`. */
 type Point = Vector<number>;

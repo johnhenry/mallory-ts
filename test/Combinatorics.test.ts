@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { Cycle } from "../src/Cycle.ts";
 import { Permutation } from "../src/Permutation.ts";
 import { Polynomial } from "../src/Polynomial.ts";

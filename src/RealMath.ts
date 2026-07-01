@@ -1,6 +1,6 @@
-import { Vector } from "./Vector.ts";
-import { VectorUtils, type Matrix } from "./VectorUtils.ts";
 import { Type } from "./Type.ts";
+import { Vector } from "./Vector.ts";
+import { type Matrix, VectorUtils } from "./VectorUtils.ts";
 
 /**
  * RealMath — arithmetic, trigonometry, numeric calculus, linear algebra and
@@ -106,11 +106,11 @@ export class RealMath {
   // -- Chapter 5: exponential / logarithmic --------------------------------
 
   static power(a = 1, power = 1): number {
-    return Math.pow(a, power);
+    return a ** power;
   }
 
   static square(a = 1): number {
-    return Math.pow(a, 2);
+    return a ** 2;
   }
 
   static squareRoot(a = 1): number {
@@ -231,8 +231,7 @@ export class RealMath {
   }
 
   static normalDistribution(mean: number, sDev: number): Unary {
-    return (x: number) =>
-      (1 / (sDev * Math.sqrt(2 * Math.PI))) * Math.pow(Math.E, -0.5 * Math.pow((x - mean) / sDev, 2));
+    return (x: number) => (1 / (sDev * Math.sqrt(2 * Math.PI))) * Math.E ** (-0.5 * ((x - mean) / sDev) ** 2);
   }
 
   static standardNormalDistribution(x: number): number {
@@ -246,7 +245,12 @@ export class RealMath {
     negativeInfinityApproximation = -5,
     integrationInterval = 0.0001,
   ): number {
-    return RealMath.integrateN(RealMath.normalDistribution(mean, sDev), negativeInfinityApproximation, x, integrationInterval);
+    return RealMath.integrateN(
+      RealMath.normalDistribution(mean, sDev),
+      negativeInfinityApproximation,
+      x,
+      integrationInterval,
+    );
   }
 
   static standardNormalProbability(z: number, negativeInfinityApproximation = -5, interval = 0.0001): number {
@@ -258,7 +262,7 @@ export class RealMath {
   /** Round to `precision` decimal places (replaces the buggy Flex NumberFormatter). */
   static roundTo(num: number, precision = 10): number {
     if (!Number.isFinite(num)) return num;
-    const factor = Math.pow(10, precision);
+    const factor = 10 ** precision;
     return Math.round(num * factor) / factor;
   }
 
@@ -331,8 +335,8 @@ export class RealMath {
 
   static pNorm(alpha: RVec, norm = 2): number {
     if (norm === 0) return RealMath.maximum(VectorUtils.transform(alpha, Math.abs));
-    const summable = VectorUtils.transform(alpha, (x) => Math.pow(Math.abs(x), norm));
-    return Math.pow(RealMath.sum(summable), 1 / norm);
+    const summable = VectorUtils.transform(alpha, (x) => Math.abs(x) ** norm);
+    return RealMath.sum(summable) ** (1 / norm);
   }
 
   static magnitudeVector(alpha: RVec): number {
@@ -400,9 +404,7 @@ export class RealMath {
   static multiplyMatrix(alpha: RMat, beta: RMat): RMat {
     const kroneckerList = new Vector<RMat>();
     for (let i = 0; i < VectorUtils.width(alpha); i++) {
-      kroneckerList.push(
-        RealMath.kroneckerMatrixProduct(VectorUtils.getColumn(alpha, i), VectorUtils.getRow(beta, i)),
-      );
+      kroneckerList.push(RealMath.kroneckerMatrixProduct(VectorUtils.getColumn(alpha, i), VectorUtils.getRow(beta, i)));
     }
     return VectorUtils.collapse(kroneckerList, RealMath.addMatrix) as RMat;
   }
@@ -450,9 +452,7 @@ export class RealMath {
     }
 
     const mat: number[][] = [...alpha].map((row) => [...(row as RVec)]);
-    const inv: number[][] = Array.from({ length: n }, (_, i) =>
-      Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
-    );
+    const inv: number[][] = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
 
     for (let col = 0; col < n; col++) {
       let pivot = col;
@@ -543,7 +543,7 @@ export class RealMath {
     if (list.length < 2) return NaN;
     const m = RealMath.mean(list);
     let s = 0;
-    for (const x of list) s += Math.pow((x as number) - m, 2);
+    for (const x of list) s += ((x as number) - m) ** 2;
     return s / (list.length - 1);
   }
 
@@ -556,7 +556,7 @@ export class RealMath {
     if (list.length < 1) return NaN;
     const m = RealMath.mean(list);
     let s = 0;
-    for (const x of list) s += Math.pow((x as number) - m, 2);
+    for (const x of list) s += ((x as number) - m) ** 2;
     return s / list.length;
   }
 

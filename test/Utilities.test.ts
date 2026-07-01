@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { Utilities } from "../src/Utilities.ts";
 
 test("roundTo default precision", () => {

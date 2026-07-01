@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { IntUtils } from "../src/IntUtils.ts";
 
 test("toWordsTriple: ones and teens", () => {
@@ -37,10 +37,7 @@ test("toWords: single group and negatives", () => {
 test("toWords: multi-group grouping", () => {
   assert.equal(IntUtils.toWords(1000), "one-thousand");
   assert.equal(IntUtils.toWords(1000000), "one-million");
-  assert.equal(
-    IntUtils.toWords(1234567),
-    "one-million,two-hundred-thirty-four-thousand,five-hundred-sixty-seven",
-  );
+  assert.equal(IntUtils.toWords(1234567), "one-million,two-hundred-thirty-four-thousand,five-hundred-sixty-seven");
 });
 
 test("toWords: accepts string form for big numbers", () => {

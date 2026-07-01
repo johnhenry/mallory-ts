@@ -1,8 +1,8 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
-import { ComplexNumber } from "../src/ComplexNumber.ts";
+import { test } from "node:test";
 import { ComplexMath as C } from "../src/ComplexMath.ts";
+import { ComplexNumber } from "../src/ComplexNumber.ts";
+import { Vector } from "../src/Vector.ts";
 
 const z = (re: number, im = 0) => new ComplexNumber(re, im);
 const cvec = (...xs: Array<[number, number] | number>) =>
@@ -83,8 +83,14 @@ test("vector add / dot / cross (index bug fix)", () => {
 });
 
 test("matrix multiply and determinant", () => {
-  const a = cmat([[1, 2], [3, 4]]);
-  const b = cmat([[5, 6], [7, 8]]);
+  const a = cmat([
+    [1, 2],
+    [3, 4],
+  ]);
+  const b = cmat([
+    [5, 6],
+    [7, 8],
+  ]);
   const prod = C.multiplyMatrix(a, b);
   assert.ok((prod[0] as Vector<ComplexNumber>)[0].equals(z(19)));
   assert.ok((prod[1] as Vector<ComplexNumber>)[1].equals(z(50)));
@@ -92,7 +98,10 @@ test("matrix multiply and determinant", () => {
 });
 
 test("invertMatrix produces the inverse (pivoting bug fix)", () => {
-  const a = cmat([[0, 1], [1, 0]]); // needs a row swap
+  const a = cmat([
+    [0, 1],
+    [1, 0],
+  ]); // needs a row swap
   const inv = C.invertMatrix(a);
   const prod = C.multiplyMatrix(a, inv);
   assert.ok((prod[0] as Vector<ComplexNumber>)[0].equals(z(1)));
@@ -109,7 +118,10 @@ test("statistics: mean, sample variance (bug fix)", () => {
 
 test("sort is numeric via comparators", () => {
   const data = cvec(10, 2, 33, 4, 1);
-  assert.deepEqual([...C.sort(data)].map((c) => (c as ComplexNumber).value), [1, 2, 4, 10, 33]);
+  assert.deepEqual(
+    [...C.sort(data)].map((c) => (c as ComplexNumber).value),
+    [1, 2, 4, 10, 33],
+  );
   assert.ok(C.minimum(data).equals(z(1)));
   assert.ok(C.maximum(data).equals(z(33)));
 });

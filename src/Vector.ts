@@ -56,10 +56,8 @@ export class Vector<T = unknown> extends Array<T> {
    */
   static fromXML(xml: string): Vector<number | string> {
     const out = new Vector<number | string>();
-    const re = /<coordinate>(.*?)<\/coordinate>/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(xml)) !== null) {
-      const raw = m[1] as string;
+    for (const match of xml.matchAll(/<coordinate>(.*?)<\/coordinate>/g)) {
+      const raw = match[1] as string;
       const n = Number(raw);
       out.push(raw !== "" && !Number.isNaN(n) ? n : raw);
     }

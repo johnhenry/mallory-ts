@@ -1,7 +1,7 @@
-import { Vector } from "./Vector.ts";
-import { VectorUtils, type Matrix } from "./VectorUtils.ts";
-import { ComplexNumber } from "./ComplexNumber.ts";
 import { ComplexMath } from "./ComplexMath.ts";
+import { ComplexNumber } from "./ComplexNumber.ts";
+import { Vector } from "./Vector.ts";
+import { type Matrix, VectorUtils } from "./VectorUtils.ts";
 
 /**
  * Structure — a generic algebraic structure (group, ring, field, …) defined by

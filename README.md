@@ -23,10 +23,16 @@ type stripping).
 
 ```bash
 npm install
-npm test        # run the node:test suite
-npm run build   # emit ./dist (ESM + .d.ts)
-npm run typecheck
+npm test           # run the node:test suite (against src/)
+npm run typecheck  # tsc --noEmit
+npm run check      # Biome lint + format check
+npm run check:fix  # apply Biome fixes
+npm run build      # emit ./dist (ESM + .d.ts)
+npm run test:build # build, then smoke-test the emitted package
 ```
+
+Continuous integration (`.github/workflows/ci.yml`) runs typecheck → lint →
+tests → build → dist smoke test on Node 22 and 24.
 
 ## Modules
 

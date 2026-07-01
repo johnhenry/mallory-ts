@@ -9,6 +9,7 @@
       "import": "./dist/index.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist",
     "src",
@@ -18,21 +19,38 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test --experimental-strip-types 'test/**/*.test.ts'",
-    "test:build": "npm run build && node --test dist-test/**/*.test.js"
+    "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'test/**/*.test.ts'",
+    "test:build": "npm run build && node scripts/smoke.mjs",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "prepublishOnly": "npm run typecheck && npm run check && npm test && npm run build"
   },
   "keywords": [
     "math",
+    "mathematics",
     "complex-numbers",
     "linear-algebra",
     "matrix",
     "permutation",
     "group-theory",
+    "finite-field",
     "polynomial",
     "expression-parser"
   ],
   "author": "John Henry <john@iamjohnhenry.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnhenry/mallory-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johnhenry/mallory-ts/issues"
+  },
+  "homepage": "https://github.com/johnhenry/mallory-ts#readme",
   "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
     "typescript": "^5.9.3"
   },
   "engines": {

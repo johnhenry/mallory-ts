@@ -10,21 +10,53 @@
  */
 export class IntUtils {
   private static readonly ONES = [
-    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight",
-    "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
-    "sixteen", "seventeen", "eighteen", "nineteen",
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
   ];
 
   // index 2..9 => tens words (forty/ninety fixed from AS3 "fourty"/"ninty").
   private static readonly TENS: Record<number, string> = {
-    2: "twenty", 3: "thirty", 4: "forty", 5: "fifty",
-    6: "sixty", 7: "seventy", 8: "eighty", 9: "ninety",
+    2: "twenty",
+    3: "thirty",
+    4: "forty",
+    5: "fifty",
+    6: "sixty",
+    7: "seventy",
+    8: "eighty",
+    9: "ninety",
   };
 
   /** Accepted group suffixes (units, thousands, millions, …). */
   static readonly ActualNames = [
-    "", "-thousand", "-million", "-billion", "-trillion", "-quadrillion",
-    "-quintillion", "-sextillion", "-septillion", "-octillion", "-nonillion",
+    "",
+    "-thousand",
+    "-million",
+    "-billion",
+    "-trillion",
+    "-quadrillion",
+    "-quintillion",
+    "-sextillion",
+    "-septillion",
+    "-octillion",
+    "-nonillion",
     "-decillion",
   ];
 
@@ -114,18 +146,28 @@ export class IntUtils {
     const lastWord = numString.substr(numString.lastIndexOf("-"));
     numString = numString.substring(0, numString.lastIndexOf("-"));
     switch (lastWord) {
-      case "-one": return `${numString}-first`;
-      case "-two": return `${numString}-second`;
-      case "-three": return `${numString}-third`;
-      case "-four": return `${numString}-fourth`;
-      case "-five": return `${numString}-fifth`;
+      case "-one":
+        return `${numString}-first`;
+      case "-two":
+        return `${numString}-second`;
+      case "-three":
+        return `${numString}-third`;
+      case "-four":
+        return `${numString}-fourth`;
+      case "-five":
+        return `${numString}-fifth`;
     }
     switch (originalString) {
-      case "one": return `${numString}first`;
-      case "two": return `${numString}second`;
-      case "three": return `${numString}third`;
-      case "four": return `${numString}fourth`;
-      case "five": return `${numString}fifth`;
+      case "one":
+        return `${numString}first`;
+      case "two":
+        return `${numString}second`;
+      case "three":
+        return `${numString}third`;
+      case "four":
+        return `${numString}fourth`;
+      case "five":
+        return `${numString}fifth`;
     }
     return `${originalString}th`;
   }
@@ -149,13 +191,13 @@ export class IntUtils {
 
     let finalString: string;
     if ((!integer || IntUtils.toWords(integer) === "zero") && decimal.length > 0) {
-      finalString = `${IntUtils.toWords(decimal)} ${IntUtils.toWordsOrdinalLazy(Math.pow(10, decimal.length))}`;
+      finalString = `${IntUtils.toWords(decimal)} ${IntUtils.toWordsOrdinalLazy(10 ** decimal.length)}`;
     } else if ((!decimal || IntUtils.toWords(decimal) === "zero") && integer.length > 0) {
       finalString = IntUtils.toWords(integer);
     } else if (!(integer || decimal)) {
       return null;
     } else {
-      finalString = `${IntUtils.toWords(integer)} and ${IntUtils.toWords(decimal)} ${IntUtils.toWordsOrdinalLazy(Math.pow(10, decimal.length))}`;
+      finalString = `${IntUtils.toWords(integer)} and ${IntUtils.toWords(decimal)} ${IntUtils.toWordsOrdinalLazy(10 ** decimal.length)}`;
     }
 
     return pluralFraction ? `${finalString}s` : finalString;

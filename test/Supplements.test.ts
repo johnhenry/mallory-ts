@@ -1,17 +1,16 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
-import { Polynomial } from "../src/Polynomial.ts";
-import { Polygon } from "../src/Polygon.ts";
-import { RealMath } from "../src/RealMath.ts";
+import { test } from "node:test";
 import { ComplexMath } from "../src/ComplexMath.ts";
 import { ComplexNumber } from "../src/ComplexNumber.ts";
+import { Polygon } from "../src/Polygon.ts";
+import { Polynomial } from "../src/Polynomial.ts";
+import { RealMath } from "../src/RealMath.ts";
 import { Structure } from "../src/Structure.ts";
+import { Vector } from "../src/Vector.ts";
 
 const pt = (...xs: number[]) => Vector.fromArray(xs);
 const close = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) <= eps;
 const mat = (rows: number[][]) => Vector.fromArray(rows.map((r) => Vector.fromArray(r)));
-const deep = (m: Vector<unknown>) => m.map((r) => (r instanceof Vector ? [...r] : r));
 
 // --- Polynomial division & parse ---
 
@@ -21,7 +20,10 @@ test("Polynomial.divmod: a = q*b + r", () => {
   const { quotient, remainder } = Polynomial.divmod(a, b);
   // reconstruct q*b + r and compare to a
   const recon = Polynomial.add(Polynomial.multiply(quotient, b), remainder);
-  assert.deepEqual([...recon].map((c) => RealMath.roundTo(c as number, 9)), [...a]);
+  assert.deepEqual(
+    [...recon].map((c) => RealMath.roundTo(c as number, 9)),
+    [...a],
+  );
   assert.ok(remainder.length <= b.length - 1 || remainder.every((c) => c === 0));
 });
 
@@ -95,7 +97,15 @@ test("Vector.fromXML / fromString round-trip", () => {
 test("Structure.realField preset", () => {
   const R = Structure.realField();
   assert.equal(R.subtract(5, 3), 2);
-  assert.equal(R.determinant(mat([[1, 2], [3, 4]])), -2);
+  assert.equal(
+    R.determinant(
+      mat([
+        [1, 2],
+        [3, 4],
+      ]),
+    ),
+    -2,
+  );
 });
 
 test("Structure.complexField preset", () => {
@@ -110,7 +120,10 @@ test("Structure.integersModulo preset (GF(7) field)", () => {
   assert.equal(gf7.multiply(3, 5), 1);
   assert.equal(gf7.reciprocal(3), 5);
   // matrix inverse over GF(7)
-  const a = mat([[2, 3], [1, 4]]);
+  const a = mat([
+    [2, 3],
+    [1, 4],
+  ]);
   const prod = gf7.multiplyMatrix(a, gf7.invertMatrix(a));
   assert.equal(gf7.equality((prod[0] as Vector<number>)[0], 1), true);
   assert.equal(gf7.equality((prod[1] as Vector<number>)[1], 1), true);

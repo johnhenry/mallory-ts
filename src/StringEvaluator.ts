@@ -1,9 +1,9 @@
+import { ComplexMath } from "./ComplexMath.ts";
 import { ComplexNumber } from "./ComplexNumber.ts";
-import { Vector } from "./Vector.ts";
-import { SpecialOperator } from "./SpecialOperator.ts";
 import { Environment } from "./Environment.ts";
 import { Expression } from "./Expression.ts";
-import { ComplexMath } from "./ComplexMath.ts";
+import { SpecialOperator } from "./SpecialOperator.ts";
+import { Vector } from "./Vector.ts";
 
 /**
  * StringEvaluator — a small recursive evaluator for mathematical expression
@@ -39,7 +39,7 @@ export class StringEvaluator {
   static evaluate(expression: unknown, environment: Environment): unknown {
     if (typeof expression !== "string") return expression;
 
-    let expr = expression.split("\r").join("").split(" ").join("");
+    const expr = expression.split("\r").join("").split(" ").join("");
 
     if (ComplexNumber.isComplex(expr)) return new ComplexNumber(expr);
 
@@ -126,14 +126,16 @@ export class StringEvaluator {
 
   /** Split at top-level `splitter`s, rejoining pieces that fall inside brackets. */
   private static seperateArray(expression: string, splitter = ","): string[] {
-    let exArray = expression.split(splitter);
+    const exArray = expression.split(splitter);
     for (const [open, close] of [
       ["(", ")"],
       ["[", "]"],
       ["{", "}"],
     ] as const) {
       for (let i = 0; i < exArray.length - 1; i++) {
-        if (StringEvaluator.countChar(exArray[i] as string, open) > StringEvaluator.countChar(exArray[i] as string, close)) {
+        if (
+          StringEvaluator.countChar(exArray[i] as string, open) > StringEvaluator.countChar(exArray[i] as string, close)
+        ) {
           exArray[i] = `${exArray[i]}${splitter}${exArray[i + 1]}`;
           exArray.splice(i + 1, 1);
           i--;

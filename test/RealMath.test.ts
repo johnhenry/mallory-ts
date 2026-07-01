@@ -1,7 +1,7 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
+import { test } from "node:test";
 import { RealMath as R } from "../src/RealMath.ts";
+import { Vector } from "../src/Vector.ts";
 
 const v = (...xs: number[]) => Vector.fromArray(xs);
 const mat = (rows: number[][]) => Vector.fromArray(rows.map((r) => Vector.fromArray(r)));
@@ -51,14 +51,26 @@ test("roundTo", () => {
 
 test("integrateN approximates a known integral (bug fix)", () => {
   // ∫₀¹ x² dx = 1/3
-  assert.ok(close(R.integrateN((x) => x * x, 0, 1, 0.0001), 1 / 3, 1e-3));
+  assert.ok(
+    close(
+      R.integrateN((x) => x * x, 0, 1, 0.0001),
+      1 / 3,
+      1e-3,
+    ),
+  );
   // ∫₀^π sin x dx = 2
   assert.ok(close(R.integrateN(Math.sin, 0, Math.PI, 0.0001), 2, 1e-3));
 });
 
 test("differentiateN approximates a derivative (symmetric, bug fix)", () => {
   // d/dx x² at x=3 is 6
-  assert.ok(close(R.differentiateN((x) => x * x, 3, 1e-4), 6, 1e-4));
+  assert.ok(
+    close(
+      R.differentiateN((x) => x * x, 3, 1e-4),
+      6,
+      1e-4,
+    ),
+  );
   // d/dx sin at 0 is 1
   assert.ok(close(R.differentiateN(Math.sin, 0, 1e-4), 1, 1e-6));
 });
@@ -96,42 +108,123 @@ test("angleBetween orthogonal vectors is pi/2", () => {
 });
 
 test("matrix add/subtract/scale", () => {
-  const a = mat([[1, 2], [3, 4]]);
-  const b = mat([[5, 6], [7, 8]]);
-  assert.deepEqual(deep(R.addMatrix(a, b)), [[6, 8], [10, 12]]);
-  assert.deepEqual(deep(R.subtractMatrix(b, a)), [[4, 4], [4, 4]]);
-  assert.deepEqual(deep(R.scaleMatrix(a, 2)), [[2, 4], [6, 8]]);
+  const a = mat([
+    [1, 2],
+    [3, 4],
+  ]);
+  const b = mat([
+    [5, 6],
+    [7, 8],
+  ]);
+  assert.deepEqual(deep(R.addMatrix(a, b)), [
+    [6, 8],
+    [10, 12],
+  ]);
+  assert.deepEqual(deep(R.subtractMatrix(b, a)), [
+    [4, 4],
+    [4, 4],
+  ]);
+  assert.deepEqual(deep(R.scaleMatrix(a, 2)), [
+    [2, 4],
+    [6, 8],
+  ]);
 });
 
 test("multiplyMatrix is a correct standard product", () => {
-  const a = mat([[1, 2], [3, 4]]);
-  const b = mat([[5, 6], [7, 8]]);
-  assert.deepEqual(deep(R.multiplyMatrix(a, b)), [[19, 22], [43, 50]]);
+  const a = mat([
+    [1, 2],
+    [3, 4],
+  ]);
+  const b = mat([
+    [5, 6],
+    [7, 8],
+  ]);
+  assert.deepEqual(deep(R.multiplyMatrix(a, b)), [
+    [19, 22],
+    [43, 50],
+  ]);
   const id = R.generateIdentity(2, 2);
-  assert.deepEqual(deep(R.multiplyMatrix(a, id)), [[1, 2], [3, 4]]);
+  assert.deepEqual(deep(R.multiplyMatrix(a, id)), [
+    [1, 2],
+    [3, 4],
+  ]);
 });
 
 test("determinant / permanent / trace", () => {
-  assert.equal(R.determinant(mat([[1, 2], [3, 4]])), -2);
-  assert.equal(R.determinant(mat([[2, 0, 0], [0, 3, 0], [0, 0, 4]])), 24);
-  assert.equal(R.permanent(mat([[1, 2], [3, 4]])), 10);
-  assert.equal(R.trace(mat([[1, 2], [3, 4]])), 5);
+  assert.equal(
+    R.determinant(
+      mat([
+        [1, 2],
+        [3, 4],
+      ]),
+    ),
+    -2,
+  );
+  assert.equal(
+    R.determinant(
+      mat([
+        [2, 0, 0],
+        [0, 3, 0],
+        [0, 0, 4],
+      ]),
+    ),
+    24,
+  );
+  assert.equal(
+    R.permanent(
+      mat([
+        [1, 2],
+        [3, 4],
+      ]),
+    ),
+    10,
+  );
+  assert.equal(
+    R.trace(
+      mat([
+        [1, 2],
+        [3, 4],
+      ]),
+    ),
+    5,
+  );
 });
 
 test("invertMatrix (with pivoting) inverts and handles a zero pivot", () => {
-  const a = mat([[4, 7], [2, 6]]);
+  const a = mat([
+    [4, 7],
+    [2, 6],
+  ]);
   const inv = R.invertMatrix(a);
   const prod = R.multiplyMatrix(a, inv).map((r) => (r as Vector<number>).map((x) => R.roundTo(x, 6)));
-  assert.deepEqual(deep(prod as Vector<unknown>), [[1, 0], [0, 1]]);
+  assert.deepEqual(deep(prod as Vector<unknown>), [
+    [1, 0],
+    [0, 1],
+  ]);
   // matrix whose first pivot is 0 — needs a row swap
-  const b = mat([[0, 1], [1, 0]]);
-  assert.deepEqual(deep(R.invertMatrix(b)), [[0, 1], [1, 0]]);
+  const b = mat([
+    [0, 1],
+    [1, 0],
+  ]);
+  assert.deepEqual(deep(R.invertMatrix(b)), [
+    [0, 1],
+    [1, 0],
+  ]);
 });
 
 test("powerMatrix (bug fix: actually multiplies)", () => {
-  const a = mat([[1, 1], [0, 1]]);
-  assert.deepEqual(deep(R.powerMatrix(a, 3)), [[1, 3], [0, 1]]);
-  assert.deepEqual(deep(R.powerMatrix(a, 0)), [[1, 0], [0, 1]]);
+  const a = mat([
+    [1, 1],
+    [0, 1],
+  ]);
+  assert.deepEqual(deep(R.powerMatrix(a, 3)), [
+    [1, 3],
+    [0, 1],
+  ]);
+  assert.deepEqual(deep(R.powerMatrix(a, 0)), [
+    [1, 0],
+    [0, 1],
+  ]);
 });
 
 test("sort is numeric (bug fix) so order stats are correct", () => {

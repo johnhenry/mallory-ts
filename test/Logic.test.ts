@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { Logic } from "../src/Logic.ts";
 
 test("truth / falsehood ignore arguments", () => {

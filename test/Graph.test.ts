@@ -1,9 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Vector } from "../src/Vector.ts";
-import { Polygon } from "../src/Polygon.ts";
-import { GraphUtils } from "../src/GraphUtils.ts";
+import { test } from "node:test";
 import { Graph3DUtils } from "../src/Graph3DUtils.ts";
+import { GraphUtils } from "../src/GraphUtils.ts";
+import { Polygon } from "../src/Polygon.ts";
+import { Vector } from "../src/Vector.ts";
 
 const pt = (...xs: number[]) => Vector.fromArray(xs);
 const mat = <T>(rows: T[][]) => Vector.fromArray(rows.map((r) => Vector.fromArray(r)));
@@ -30,7 +30,13 @@ test("barPlacement flips negative bars", () => {
 });
 
 test("vectorToCurve emits moveTo then lineTo commands", () => {
-  const path = GraphUtils.vectorToCurve(mat([[0, 0], [1, 2], [3, 4]]));
+  const path = GraphUtils.vectorToCurve(
+    mat([
+      [0, 0],
+      [1, 2],
+      [3, 4],
+    ]),
+  );
   assert.equal(path.commands.length, 3);
   assert.deepEqual(path.commands[0], { op: "moveTo", x: 0, y: 0 });
   assert.deepEqual(path.commands[2], { op: "lineTo", x: 3, y: 4 });

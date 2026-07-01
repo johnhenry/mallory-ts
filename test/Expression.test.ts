@@ -1,9 +1,9 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { ComplexNumber } from "../src/ComplexNumber.ts";
 import { Environment } from "../src/Environment.ts";
 import { Expression } from "../src/Expression.ts";
 import { StringEvaluator } from "../src/StringEvaluator.ts";
-import { ComplexNumber } from "../src/ComplexNumber.ts";
 import { Vector } from "../src/Vector.ts";
 
 const val = (x: unknown) => (x as ComplexNumber).value;
@@ -90,7 +90,10 @@ test("evaluate: vectors", () => {
   const env = StringEvaluator.mathEnvironment();
   const v = StringEvaluator.evaluate("[1,2,3]", env) as Vector<ComplexNumber>;
   assert.ok(v instanceof Vector);
-  assert.deepEqual([...v].map((c) => c.value), [1, 2, 3]);
+  assert.deepEqual(
+    [...v].map((c) => c.value),
+    [1, 2, 3],
+  );
 });
 
 test("evaluate: unbound function passes through symbolically (bug fix)", () => {

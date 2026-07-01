@@ -1,8 +1,8 @@
 import { ComplexNumber } from "./ComplexNumber.ts";
-import { Vector } from "./Vector.ts";
-import { VectorUtils, type Matrix } from "./VectorUtils.ts";
 import { RealMath } from "./RealMath.ts";
 import { Type } from "./Type.ts";
+import { Vector } from "./Vector.ts";
+import { type Matrix, VectorUtils } from "./VectorUtils.ts";
 
 /**
  * ComplexMath — the full complex-valued counterpart to {@link RealMath}:
@@ -234,7 +234,7 @@ export class ComplexMath {
     const ang = ComplexMath.angle(a);
     const c = b.value;
     const d = b.iValue;
-    const multiplier = Math.pow(mag, c) / Math.pow(Math.E, d * ang);
+    const multiplier = mag ** c / Math.E ** (d * ang);
     const cospart = multiplier * Math.cos(d * Math.log(mag) + c * ang);
     const sinpart = multiplier * Math.sin(d * Math.log(mag) + c * ang);
     return ComplexMath.identity(new ComplexNumber(cospart, sinpart));
@@ -328,7 +328,10 @@ export class ComplexMath {
     return ComplexMath.multiply(
       ComplexMath.I.neg(),
       ComplexMath.logarithm(
-        ComplexMath.add(ComplexMath.multiply(ComplexMath.I, a), ComplexMath.squareRoot(ComplexMath.subtract(1, ComplexMath.square(a)))),
+        ComplexMath.add(
+          ComplexMath.multiply(ComplexMath.I, a),
+          ComplexMath.squareRoot(ComplexMath.subtract(1, ComplexMath.square(a))),
+        ),
       ),
     );
   }
@@ -368,12 +371,17 @@ export class ComplexMath {
   }
   static arcHyperbolicCosine(alpha: CNInput): ComplexNumber {
     const a = cn(alpha);
-    return ComplexMath.logarithm(ComplexMath.add(a, ComplexMath.squareRoot(ComplexMath.subtract(ComplexMath.square(a), 1))));
+    return ComplexMath.logarithm(
+      ComplexMath.add(a, ComplexMath.squareRoot(ComplexMath.subtract(ComplexMath.square(a), 1))),
+    );
   }
   static arcHyperbolicTangent(alpha: CNInput): ComplexNumber {
     const a = cn(alpha);
     return ComplexMath.logarithm(
-      ComplexMath.divide(ComplexMath.squareRoot(ComplexMath.subtract(1, ComplexMath.square(a))), ComplexMath.subtract(1, a)),
+      ComplexMath.divide(
+        ComplexMath.squareRoot(ComplexMath.subtract(1, ComplexMath.square(a))),
+        ComplexMath.subtract(1, a),
+      ),
     );
   }
   static arcHyperbolicSecant(alpha: CNInput): ComplexNumber {
@@ -391,18 +399,25 @@ export class ComplexMath {
   static arcHyperbolicCotangent(alpha: CNInput): ComplexNumber {
     const a = cn(alpha);
     return ComplexMath.logarithm(
-      ComplexMath.divide(ComplexMath.squareRoot(ComplexMath.subtract(ComplexMath.square(a), 1)), ComplexMath.subtract(a, 1)),
+      ComplexMath.divide(
+        ComplexMath.squareRoot(ComplexMath.subtract(ComplexMath.square(a), 1)),
+        ComplexMath.subtract(a, 1),
+      ),
     );
   }
 
   // -- Chapter 7: series / calculus ----------------------------------------
 
   static sumSeries(unaryOperation: (x: number) => ComplexNumber, start = 0, end = 0): ComplexNumber {
-    return ComplexMath.sum(VectorUtils.transform(VectorUtils.arithmeticSequence(cn(start).value, cn(end).value), unaryOperation));
+    return ComplexMath.sum(
+      VectorUtils.transform(VectorUtils.arithmeticSequence(cn(start).value, cn(end).value), unaryOperation),
+    );
   }
 
   static productSeries(unaryOperation: (x: number) => ComplexNumber, start = 0, end = 0): ComplexNumber {
-    return ComplexMath.product(VectorUtils.transform(VectorUtils.arithmeticSequence(cn(start).value, cn(end).value), unaryOperation));
+    return ComplexMath.product(
+      VectorUtils.transform(VectorUtils.arithmeticSequence(cn(start).value, cn(end).value), unaryOperation),
+    );
   }
 
   /** Newton–Raphson root finder (bug fix: numeric derivative; bounded loop). */
@@ -431,7 +446,12 @@ export class ComplexMath {
   }
 
   /** Numeric integral via the midpoint rule (bug fix, as in RealMath). */
-  static integrateN(unaryOperation: CUnary, lowerLimit: CNInput, upperLimit: CNInput, interval: CNInput = 0.01): ComplexNumber {
+  static integrateN(
+    unaryOperation: CUnary,
+    lowerLimit: CNInput,
+    upperLimit: CNInput,
+    interval: CNInput = 0.01,
+  ): ComplexNumber {
     const step = cn(interval);
     if (!ComplexMath.magGreaterThan(step, 0)) return ComplexNumber.NaCN;
     let result = ComplexMath.Zero;
@@ -473,7 +493,10 @@ export class ComplexMath {
     return (x: ComplexNumber) =>
       ComplexMath.multiply(
         ComplexMath.reciprocal(ComplexMath.multiply(sDev, Math.sqrt(2 * Math.PI))),
-        ComplexMath.power(ComplexMath.E, ComplexMath.multiply(-0.5, ComplexMath.square(ComplexMath.zScore(x, mean, sDev)))),
+        ComplexMath.power(
+          ComplexMath.E,
+          ComplexMath.multiply(-0.5, ComplexMath.square(ComplexMath.zScore(x, mean, sDev))),
+        ),
       );
   }
 
@@ -488,10 +511,19 @@ export class ComplexMath {
     negativeInfinityApproximation: CNInput = -5,
     integrationInterval: CNInput = 0.0001,
   ): ComplexNumber {
-    return ComplexMath.integrateN(ComplexMath.normalDistribution(mean, sDev), negativeInfinityApproximation, x, integrationInterval);
+    return ComplexMath.integrateN(
+      ComplexMath.normalDistribution(mean, sDev),
+      negativeInfinityApproximation,
+      x,
+      integrationInterval,
+    );
   }
 
-  static standardNormalProbability(z: CNInput, negativeInfinityApproximation: CNInput = -5, interval: CNInput = 0.0001): ComplexNumber {
+  static standardNormalProbability(
+    z: CNInput,
+    negativeInfinityApproximation: CNInput = -5,
+    interval: CNInput = 0.0001,
+  ): ComplexNumber {
     return ComplexMath.integrateN(ComplexMath.standardNormalDistribution, negativeInfinityApproximation, z, interval);
   }
 
@@ -748,7 +780,10 @@ export class ComplexMath {
       return new ComplexNumber(ordered[theIndex - 1] as ComplexNumber);
     }
     return ComplexMath.divide(
-      ComplexMath.add(ordered[Math.floor(theIndex - 1)] as ComplexNumber, ordered[Math.ceil(theIndex - 1)] as ComplexNumber),
+      ComplexMath.add(
+        ordered[Math.floor(theIndex - 1)] as ComplexNumber,
+        ordered[Math.ceil(theIndex - 1)] as ComplexNumber,
+      ),
       2,
     );
   }
@@ -872,7 +907,10 @@ export class ComplexMath {
   }
 
   static linRegIntercept(x: CVec, y: CVec): ComplexNumber {
-    return ComplexMath.subtract(ComplexMath.mean(y), ComplexMath.multiply(ComplexMath.linRegSlope(x, y), ComplexMath.mean(x)));
+    return ComplexMath.subtract(
+      ComplexMath.mean(y),
+      ComplexMath.multiply(ComplexMath.linRegSlope(x, y), ComplexMath.mean(x)),
+    );
   }
 
   static linearRegression(x: CVec, y: CVec): CVec {

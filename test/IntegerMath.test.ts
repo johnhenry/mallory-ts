@@ -1,5 +1,5 @@
-import { test } from "node:test";
 import assert from "node:assert/strict";
+import { test } from "node:test";
 import { IntegerMath as I } from "../src/IntegerMath.ts";
 
 test("modulus is non-negative and safe (bug fix)", () => {
