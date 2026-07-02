@@ -186,7 +186,13 @@ function diffTraced(e: Expr, x: string, steps: DifferentiationStep[]): Expr {
         result = mul(mul(e.exp, pow(e.base, num(e.exp.value - 1))), diffTraced(e.base, x, steps));
       } else {
         rule = "Generalized Power Rule";
-        result = mul(e, add(mul(diffTraced(e.exp, x, steps), fn("ln", e.base)), mul(e.exp, div(diffTraced(e.base, x, steps), e.base))));
+        result = mul(
+          e,
+          add(
+            mul(diffTraced(e.exp, x, steps), fn("ln", e.base)),
+            mul(e.exp, div(diffTraced(e.base, x, steps), e.base)),
+          ),
+        );
       }
       break;
     case "func": {
