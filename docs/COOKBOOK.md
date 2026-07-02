@@ -197,12 +197,26 @@ import { Symbolic } from "mallory-math";
 
 Symbolic.toString(Symbolic.differentiate("x^3")); // "3*x^2"
 Symbolic.toString(Symbolic.integrate("cos(x)")); // "sin(x)"
+Symbolic.toString(Symbolic.integrate("x*sin(x)")); // "sin(x) - x*cos(x)" — integration by parts
 Symbolic.toString(Symbolic.taylor("exp(x)", "x", 0, 4)); // Taylor series about 0
 Symbolic.evaluate("x^2 + 1", { x: 3 }); // 10
+
+// Algebraic simplification collects like terms, not just identities:
+Symbolic.toString(Symbolic.simplify("a*b + b*a")); // "2*(a*b)"
+Symbolic.toString(Symbolic.expand("(x+1)^2")); // "x^2 + 2*x + 1"
+Symbolic.toString(Symbolic.substitute("x^2 + 1", "x", "y+1")); // in terms of y
+
+// Polynomial solving/factoring (degree <= 6; real roots only):
+Symbolic.solve("x^2 - 5*x + 6").map(Symbolic.toString); // ["3", "2"]
+Symbolic.toString(Symbolic.factor("x^2 - 1")); // "(x - 1)*(x + 1)"
+
+Symbolic.limit("sin(x)/x", "x", 0); // 1 — via L'Hopital's rule
+Symbolic.toLatex("x^2/2"); // "\\frac{x^{2}}{2}"
 ```
 
 Integration covers the elementary rules (power rule, `1/x`, linear-substitution
-`sin`/`cos`/`exp`); anything outside that set throws `NotIntegrableError`
+`sin`/`cos`/`exp`, integration by parts for a polynomial times `sin`/`cos`/`exp`,
+and arctan/arcsin forms); anything outside that set throws `NotIntegrableError`
 rather than returning a wrong answer — e.g. `Symbolic.integrate("sin(x^2)")`.
 
 ## Multivariable calculus

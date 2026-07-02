@@ -120,3 +120,123 @@ test("differentiateSteps on a bare constant/variable records a single leaf step"
   assert.equal(varSteps.length, 1);
   assert.equal(varSteps[0].rule, "Variable Rule");
 });
+
+test("differentiate inverse trig and hyperbolic functions", () => {
+  const cases: Array<[string, (x: number) => number]> = [
+    ["asin(x)", (x) => 1 / Math.sqrt(1 - x * x)],
+    ["acos(x)", (x) => -1 / Math.sqrt(1 - x * x)],
+    ["atan(x)", (x) => 1 / (1 + x * x)],
+    ["sinh(x)", (x) => Math.cosh(x)],
+    ["cosh(x)", (x) => Math.sinh(x)],
+    ["tanh(x)", (x) => 1 / Math.cosh(x) ** 2],
+  ];
+  for (const [expr, expected] of cases) {
+    const d = Symbolic.differentiate(expr);
+    assert.ok(Math.abs(Symbolic.evaluate(d, { x: 0.4 }) - expected(0.4)) < 1e-9, expr);
+  }
+});
+
+test("evaluate and compile agree on the new elementary functions", () => {
+  for (const expr of ["asin(x)", "acos(x)", "atan(x)", "sinh(x)", "cosh(x)", "tanh(x)"]) {
+    const evaluated = Symbolic.evaluate(expr, { x: 0.3 });
+    const compiled = Symbolic.compile(expr)({ x: 0.3 });
+    assert.ok(Math.abs(evaluated - compiled) < 1e-12, expr);
+  }
+});
+
+test("integrate by parts", () => {
+  // ∫ x sin(x) dx = sin(x) - x cos(x)
+  const F = Symbolic.integrate("x*sin(x)");
+  const check1 = (x: number) => Math.sin(x) - x * Math.cos(x);
+  assert.ok(
+    Math.abs(Symbolic.evaluate(F, { x: 1.2 }) - Symbolic.evaluate(F, { x: 0 }) - (check1(1.2) - check1(0))) < 1e-9,
+  );
+  assert.ok(Math.abs(Symbolic.evaluate(Symbolic.differentiate(F), { x: 0.7 }) - 0.7 * Math.sin(0.7)) < 1e-9);
+
+  // ∫ x^2 exp(x) dx ; derivative recovers x^2 exp(x)
+  const G = Symbolic.integrate("x^2*exp(x)");
+  assert.ok(Math.abs(Symbolic.evaluate(Symbolic.differentiate(G), { x: 1.1 }) - 1.1 ** 2 * Math.exp(1.1)) < 1e-8);
+});
+
+test("integrate arctan/arcsin forms", () => {
+  // ∫ 1/(1+x^2) dx = atan(x)
+  const F = Symbolic.integrate("1/(1+x^2)");
+  assert.ok(Math.abs(Symbolic.evaluate(Symbolic.differentiate(F), { x: 0.5 }) - 1 / (1 + 0.25)) < 1e-9);
+
+  // ∫ 1/sqrt(1-x^2) dx = asin(x)
+  const G = Symbolic.integrate("1/sqrt(1-x^2)");
+  assert.ok(Math.abs(Symbolic.evaluate(Symbolic.differentiate(G), { x: 0.3 }) - 1 / Math.sqrt(1 - 0.09)) < 1e-9);
+});
+
+test("substitute replaces a variable with an expression", () => {
+  const result = Symbolic.substitute("x^2 + 1", "x", "y+1");
+  assert.equal(Symbolic.evaluate(result, { y: 2 }), Symbolic.evaluate("x^2 + 1", { x: 3 }));
+});
+
+test("expand distributes products over sums", () => {
+  assert.equal(Symbolic.toString(Symbolic.expand("(x+1)^2")), "x^2 + 2*x + 1");
+  assert.equal(Symbolic.toString(Symbolic.expand("(x-1)*(x+1)")), "x^2 - 1");
+});
+
+test("simplify collects like terms", () => {
+  assert.equal(Symbolic.toString(Symbolic.simplify("x + x")), "2*x");
+  assert.equal(Symbolic.toString(Symbolic.simplify("x*x")), "x^2");
+  assert.equal(Symbolic.toString(Symbolic.simplify("a*b + b*a")), "2*(a*b)");
+  assert.equal(Symbolic.toString(Symbolic.simplify("2*x - x")), "x");
+  assert.equal(Symbolic.toString(Symbolic.simplify("x + 2*x + 3")), "3*x + 3");
+});
+
+test("solve finds real roots of linear, quadratic, and higher-degree polynomials", () => {
+  const rootsOf = (expr: string) =>
+    Symbolic.solve(expr)
+      .map((e) => Symbolic.evaluate(e))
+      .sort((a, b) => a - b);
+  assert.deepEqual(rootsOf("x - 3"), [3]);
+  assert.deepEqual(rootsOf("x^2 - 5*x + 6"), [2, 3]);
+  assert.deepEqual(rootsOf("x^3 - 6*x^2 + 11*x - 6"), [1, 2, 3]);
+  // no real roots
+  assert.deepEqual(Symbolic.solve("x^2 + 1"), []);
+});
+
+test("solve verifies every root actually zeroes the polynomial", () => {
+  for (const expr of ["x^2 - 2*x - 3", "2*x^2 - 3*x - 2", "x^3 - 6*x^2 + 11*x - 6"]) {
+    for (const root of Symbolic.solve(expr)) {
+      const value = Symbolic.evaluate(expr, { x: Symbolic.evaluate(root) });
+      assert.ok(Math.abs(value) < 1e-6, `${expr} at root ${Symbolic.toString(root)}`);
+    }
+  }
+});
+
+test("solve rejects non-polynomial expressions", () => {
+  assert.throws(() => Symbolic.solve("sin(x)"));
+});
+
+test("factor extracts linear factors and common terms", () => {
+  const productAt = (expr: string, x: number) => Symbolic.evaluate(expr, { x });
+  for (const expr of ["x^2 - 1", "x^2 - 5*x + 6", "2*x^2 + 4*x", "x^3 - 6*x^2 + 11*x - 6"]) {
+    const factored = Symbolic.factor(expr);
+    for (const x of [0.3, 1.7, -2.2]) {
+      assert.ok(Math.abs(productAt(Symbolic.toString(factored), x) - productAt(expr, x)) < 1e-8, expr);
+    }
+  }
+});
+
+test("factor returns the simplified expression unchanged when not a polynomial", () => {
+  assert.equal(Symbolic.toString(Symbolic.factor("sin(x)")), "sin(x)");
+});
+
+test("limit evaluates removable discontinuities via L'Hopital's rule", () => {
+  assert.ok(Math.abs(Symbolic.limit("sin(x)/x", "x", 0) - 1) < 1e-6);
+  assert.ok(Math.abs(Symbolic.limit("(x^2-1)/(x-1)", "x", 1) - 2) < 1e-6);
+});
+
+test("limit respects one-sided direction", () => {
+  assert.ok(Symbolic.limit("1/x", "x", 0, "right") > 0);
+  assert.ok(Symbolic.limit("1/x", "x", 0, "left") < 0);
+});
+
+test("toLatex renders fractions, radicals, and named functions", () => {
+  assert.equal(Symbolic.toLatex("x^2/2"), "\\frac{x^{2}}{2}");
+  assert.equal(Symbolic.toLatex("sqrt(x+1)"), "\\sqrt{x + 1}");
+  assert.equal(Symbolic.toLatex("sin(x)/cos(x)"), "\\frac{\\sin\\left(x\\right)}{\\cos\\left(x\\right)}");
+});

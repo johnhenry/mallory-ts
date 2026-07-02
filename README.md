@@ -132,7 +132,7 @@ Well beyond the original ActionScript scope, the library now spans:
 | Area | Module(s) | Highlights |
 |------|-----------|------------|
 | Numerical linear algebra | `MatrixMath` | LU, QR, Cholesky, symmetric eigen (Jacobi), SVD; `solve`, RREF, rank, null space, least squares, pseudo-inverse, norms, condition number |
-| Symbolic calculus | `Symbolic` | expression parser, symbolic differentiation, algebraic simplification, elementary integration, Taylor series |
+| Symbolic calculus | `Symbolic` | expression parser (12 elementary functions incl. inverse-trig/hyperbolic), symbolic differentiation, algebraic simplification with like-term collection, elementary integration (incl. by-parts and arctan/arcsin forms), Taylor series, `expand`/`substitute`, polynomial `solve`/`factor`, L'Hopital `limit`, LaTeX rendering |
 | Number types | `Rational`, `Quaternion`, `DualNumber`, `Interval` | exact bigint rationals, 3D-rotation quaternions, forward-mode autodiff, rigorous interval arithmetic — each also a `Structure` preset |
 | Number theory | `NumberTheory` | `bigint` modPow, extended GCD, CRT, Miller–Rabin, Pollard-rho factorization, Legendre/Jacobi |
 | Group theory | `GroupTheory` | Cayley tables, axiom checks, element order, generated subgroups, cosets, Lagrange, orbits, Sₙ/Zₙ |

@@ -1,10 +1,24 @@
 /**
  * Symbolic — a small computer-algebra engine: an expression AST with parsing,
  * symbolic differentiation, algebraic simplification, basic symbolic
- * integration, Taylor expansion, and numeric evaluation.
+ * integration, Taylor expansion, polynomial equation solving/factoring,
+ * limits, LaTeX rendering, and numeric evaluation.
  */
+import { Rational } from "./Rational.ts";
 
-export type FuncName = "sin" | "cos" | "tan" | "exp" | "ln" | "sqrt";
+export type FuncName =
+  | "sin"
+  | "cos"
+  | "tan"
+  | "exp"
+  | "ln"
+  | "sqrt"
+  | "asin"
+  | "acos"
+  | "atan"
+  | "sinh"
+  | "cosh"
+  | "tanh";
 
 export type Expr =
   | { type: "const"; value: number }
@@ -17,7 +31,7 @@ export type Expr =
   | { type: "neg"; arg: Expr }
   | { type: "func"; name: FuncName; arg: Expr };
 
-const FUNCS: FuncName[] = ["sin", "cos", "tan", "exp", "ln", "sqrt"];
+const FUNCS: FuncName[] = ["sin", "cos", "tan", "exp", "ln", "sqrt", "asin", "acos", "atan", "sinh", "cosh", "tanh"];
 
 // -- constructors -----------------------------------------------------------
 const num = (value: number): Expr => ({ type: "const", value });
@@ -83,7 +97,7 @@ export class Symbolic {
   static simplify(expr: Expr | string): Expr {
     let e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
     for (let i = 0; i < 30; i++) {
-      const next = simplifyOnce(e);
+      const next = collectLikeTerms(simplifyOnce(e));
       if (equal(next, e)) return next;
       e = next;
     }
@@ -113,6 +127,25 @@ export class Symbolic {
     return Symbolic.simplify(result);
   }
 
+  /** Replace every occurrence of a variable with a sub-expression (e.g. for changing variables or plugging in a solved value). */
+  static substitute(expr: Expr | string, variable: string, replacement: Expr | string): Expr {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    const r = typeof replacement === "string" ? Symbolic.parse(replacement) : replacement;
+    return Symbolic.simplify(subst(e, variable, r));
+  }
+
+  /** Distribute multiplication over addition/subtraction and expand small integer powers of sums, e.g. `(x+1)^2 -> x^2+2*x+1`. */
+  static expand(expr: Expr | string): Expr {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    let cur = e;
+    for (let i = 0; i < 30; i++) {
+      const next = Symbolic.simplify(expandOnce(cur));
+      if (equal(next, cur)) return next;
+      cur = next;
+    }
+    return cur;
+  }
+
   static evaluate(expr: Expr | string, env: Record<string, number> = {}): number {
     const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
     return evalExpr(e, env);
@@ -130,6 +163,61 @@ export class Symbolic {
 
   static toString(expr: Expr | string): string {
     return render(typeof expr === "string" ? Symbolic.parse(expr) : expr, 0);
+  }
+
+  /** Render `expr` as a LaTeX string, e.g. `"x/2"` -> `"\\frac{x}{2}"`. */
+  static toLatex(expr: Expr | string): string {
+    return toLatexRec(typeof expr === "string" ? Symbolic.parse(expr) : expr, 0);
+  }
+
+  /**
+   * Solve `expr = 0` for `variable`, returning every *real* root mallory-math
+   * can find as an exact `Expr` (rationals and `sqrt`-radicals where
+   * possible) — complex roots are not returned (e.g. `x^2 + 1` yields `[]`).
+   * Supports polynomials up to degree 6: linear and quadratic are solved in
+   * closed form; degree ≥ 3 is solved by repeatedly finding a rational root
+   * (rational root theorem) and deflating via synthetic division, so a cubic
+   * or quartic with only irrational/complex roots left over after rational
+   * deflation cannot be fully solved this way.
+   *
+   * @throws if `expr` isn't a polynomial in `variable` of degree ≤ 6, or if a
+   *   degree ≥ 3 factor has no rational root to deflate on.
+   */
+  static solve(expr: Expr | string, variable = "x"): Expr[] {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    const coeffs = polynomialCoeffs(Symbolic.simplify(e), variable, 6);
+    if (!coeffs) {
+      throw new Error(`solve: expression is not a polynomial in "${variable}" of degree ≤ 6.`);
+    }
+    return solvePolynomial(coeffs).map((r) => Symbolic.simplify(r));
+  }
+
+  /**
+   * Factor a polynomial in `variable`: extracts a common numeric GCD and
+   * common power of `variable`, then repeatedly pulls out rational linear
+   * factors `(variable - r)` via the rational root theorem, falling back to
+   * the quadratic formula for a final degree-2 remainder. Any remaining
+   * factor mallory-math can't reduce further (e.g. an irreducible cubic) is
+   * left as-is. Returns `expr` unchanged (simplified) if it isn't a
+   * polynomial in `variable`.
+   */
+  static factor(expr: Expr | string, variable = "x"): Expr {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    const simplified = Symbolic.simplify(e);
+    const coeffs = polynomialCoeffs(simplified, variable, 6);
+    if (!coeffs) return simplified;
+    return factorPolynomial(coeffs, variable);
+  }
+
+  /**
+   * Numeric limit of `expr` as `variable` approaches `point`. Falls back to
+   * L'Hopital's rule (repeated symbolic differentiation of numerator and
+   * denominator) whenever direct evaluation of a `div` node hits a `0/0` or
+   * `∞/∞` indeterminate form.
+   */
+  static limit(expr: Expr | string, variable = "x", point = 0, direction: "left" | "right" | "both" = "both"): number {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    return limitAt(e, variable, point, direction, 0);
   }
 }
 
@@ -218,6 +306,24 @@ function diffTraced(e: Expr, x: string, steps: DifferentiationStep[]): Expr {
         case "sqrt":
           result = div(du, mul(num(2), fn("sqrt", u)));
           break;
+        case "asin":
+          result = div(du, fn("sqrt", sub(num(1), pow(u, num(2)))));
+          break;
+        case "acos":
+          result = neg(div(du, fn("sqrt", sub(num(1), pow(u, num(2))))));
+          break;
+        case "atan":
+          result = div(du, add(num(1), pow(u, num(2))));
+          break;
+        case "sinh":
+          result = mul(fn("cosh", u), du);
+          break;
+        case "cosh":
+          result = mul(fn("sinh", u), du);
+          break;
+        case "tanh":
+          result = div(du, pow(fn("cosh", u), num(2)));
+          break;
       }
       break;
     }
@@ -266,6 +372,18 @@ function diff(e: Expr, x: string): Expr {
           return div(du, u);
         case "sqrt":
           return div(du, mul(num(2), fn("sqrt", u)));
+        case "asin":
+          return div(du, fn("sqrt", sub(num(1), pow(u, num(2)))));
+        case "acos":
+          return neg(div(du, fn("sqrt", sub(num(1), pow(u, num(2))))));
+        case "atan":
+          return div(du, add(num(1), pow(u, num(2))));
+        case "sinh":
+          return mul(fn("cosh", u), du);
+        case "cosh":
+          return mul(fn("sinh", u), du);
+        case "tanh":
+          return div(du, pow(fn("cosh", u), num(2)));
       }
     }
   }
@@ -340,6 +458,206 @@ function equal(a: Expr, b: Expr): boolean {
   }
 }
 
+// -- substitution -------------------------------------------------------------
+function subst(e: Expr, name: string, r: Expr): Expr {
+  switch (e.type) {
+    case "const":
+      return e;
+    case "var":
+      return e.name === name ? r : e;
+    case "neg":
+      return neg(subst(e.arg, name, r));
+    case "func":
+      return fn(e.name, subst(e.arg, name, r));
+    case "pow":
+      return pow(subst(e.base, name, r), subst(e.exp, name, r));
+    case "add":
+      return add(subst(e.left, name, r), subst(e.right, name, r));
+    case "sub":
+      return sub(subst(e.left, name, r), subst(e.right, name, r));
+    case "mul":
+      return mul(subst(e.left, name, r), subst(e.right, name, r));
+    case "div":
+      return div(subst(e.left, name, r), subst(e.right, name, r));
+  }
+}
+
+// -- expansion ----------------------------------------------------------------
+const MAX_EXPAND_POWER = 8;
+
+function expandOnce(e: Expr): Expr {
+  switch (e.type) {
+    case "const":
+    case "var":
+      return e;
+    case "neg":
+      return neg(expandOnce(e.arg));
+    case "func":
+      return fn(e.name, expandOnce(e.arg));
+    case "add":
+      return add(expandOnce(e.left), expandOnce(e.right));
+    case "sub":
+      return sub(expandOnce(e.left), expandOnce(e.right));
+    case "div":
+      return div(expandOnce(e.left), expandOnce(e.right));
+    case "pow": {
+      const base = expandOnce(e.base);
+      if (
+        e.exp.type === "const" &&
+        Number.isInteger(e.exp.value) &&
+        e.exp.value >= 2 &&
+        e.exp.value <= MAX_EXPAND_POWER &&
+        (base.type === "add" || base.type === "sub")
+      ) {
+        let result: Expr = base;
+        for (let i = 1; i < e.exp.value; i++) result = distribute(result, base);
+        return result;
+      }
+      return pow(base, expandOnce(e.exp));
+    }
+    case "mul":
+      return distribute(expandOnce(e.left), expandOnce(e.right));
+  }
+}
+
+/** Distribute a product over any top-level +/- structure on either side. */
+function distribute(l: Expr, r: Expr): Expr {
+  if (l.type === "add") return add(distribute(l.left, r), distribute(l.right, r));
+  if (l.type === "sub") return sub(distribute(l.left, r), distribute(l.right, r));
+  if (r.type === "add") return add(distribute(l, r.left), distribute(l, r.right));
+  if (r.type === "sub") return sub(distribute(l, r.left), distribute(l, r.right));
+  return mul(l, r);
+}
+
+// -- like-term collection -----------------------------------------------------
+// Recognizes commutative/associative equivalence that raw tree-structural
+// `equal()` misses — e.g. `x + x` -> `2*x`, `a*b + b*a` -> `2*a*b`,
+// `x*x*x` -> `x^3` — by flattening a subtree into a canonical sum-of-monomials
+// form, grouping monomials with matching (sorted) factor signatures, and
+// rebuilding. Recurses into every sub-position, so nested sums (inside a
+// `func` arg, a `mul` factor, etc.) get collected too.
+
+interface Factor {
+  base: Expr;
+  exp: number;
+}
+interface Term {
+  coeff: number;
+  factors: Factor[];
+}
+
+function collectLikeTerms(e: Expr): Expr {
+  switch (e.type) {
+    case "const":
+    case "var":
+      return e;
+    case "func":
+      return fn(e.name, collectLikeTerms(e.arg));
+    case "div":
+      return div(collectLikeTerms(e.left), collectLikeTerms(e.right));
+    case "pow":
+      return pow(collectLikeTerms(e.base), collectLikeTerms(e.exp));
+    case "neg":
+    case "add":
+    case "sub":
+    case "mul": {
+      const terms: Term[] = [];
+      flattenAdditive(e, 1, terms);
+      return rebuildAdditive(groupTerms(terms));
+    }
+  }
+}
+
+function flattenAdditive(e: Expr, sign: number, out: Term[]): void {
+  if (e.type === "add") {
+    flattenAdditive(e.left, sign, out);
+    flattenAdditive(e.right, sign, out);
+    return;
+  }
+  if (e.type === "sub") {
+    flattenAdditive(e.left, sign, out);
+    flattenAdditive(e.right, -sign, out);
+    return;
+  }
+  if (e.type === "neg") {
+    flattenAdditive(e.arg, -sign, out);
+    return;
+  }
+  const term = flattenMonomial(e);
+  out.push({ coeff: term.coeff * sign, factors: term.factors });
+}
+
+function flattenMonomial(e: Expr): Term {
+  if (e.type === "const") return { coeff: e.value, factors: [] };
+  if (e.type === "neg") {
+    const inner = flattenMonomial(e.arg);
+    return { coeff: -inner.coeff, factors: inner.factors };
+  }
+  if (e.type === "mul") {
+    const l = flattenMonomial(e.left);
+    const r = flattenMonomial(e.right);
+    return mergeFactors(l.coeff * r.coeff, [...l.factors, ...r.factors]);
+  }
+  // a power with a constant exponent contributes a single (base, exp) factor;
+  // the base itself is collected so nested sums inside it are also handled.
+  if (e.type === "pow" && e.exp.type === "const") {
+    return mergeFactors(1, [{ base: collectLikeTerms(e.base), exp: e.exp.value }]);
+  }
+  // opaque atom (var, func, div, or pow with a non-constant exponent)
+  return mergeFactors(1, [{ base: collectLikeTerms(e), exp: 1 }]);
+}
+
+function mergeFactors(coeff: number, factors: Factor[]): Term {
+  const merged: Factor[] = [];
+  for (const f of factors) {
+    const existing = merged.find((m) => equal(m.base, f.base));
+    if (existing) existing.exp += f.exp;
+    else merged.push({ ...f });
+  }
+  return { coeff, factors: merged.filter((f) => f.exp !== 0) };
+}
+
+function groupTerms(terms: Term[]): Term[] {
+  const groups = new Map<string, Term>();
+  const order: string[] = [];
+  for (const t of terms) {
+    const sorted = [...t.factors].sort((a, b) => render(a.base, 0).localeCompare(render(b.base, 0)));
+    const key = sorted.map((f) => `${render(f.base, 0)}^${f.exp}`).join("*");
+    const existing = groups.get(key);
+    if (existing) existing.coeff += t.coeff;
+    else {
+      groups.set(key, { coeff: t.coeff, factors: sorted });
+      order.push(key);
+    }
+  }
+  return order.map((k) => groups.get(k) as Term).filter((t) => t.coeff !== 0);
+}
+
+function buildMonomial(factors: Factor[]): Expr | null {
+  let result: Expr | null = null;
+  for (const f of factors) {
+    const factorExpr = f.exp === 1 ? f.base : pow(f.base, num(f.exp));
+    result = result === null ? factorExpr : mul(result, factorExpr);
+  }
+  return result;
+}
+
+function rebuildAdditive(terms: Term[]): Expr {
+  let result: Expr | null = null;
+  for (const t of terms) {
+    const monomial = buildMonomial(t.factors);
+    const magnitude = Math.abs(t.coeff);
+    const positivePart: Expr =
+      monomial === null ? num(magnitude) : magnitude === 1 ? monomial : mul(num(magnitude), monomial);
+    if (result === null) {
+      result = t.coeff < 0 ? neg(positivePart) : positivePart;
+    } else {
+      result = t.coeff < 0 ? sub(result, positivePart) : add(result, positivePart);
+    }
+  }
+  return result ?? num(0);
+}
+
 // -- integration (elementary) ----------------------------------------------
 function integ(e: Expr, x: string): Expr {
   if (!containsVar(e, x)) return mul(e, v(x)); // ∫c dx = c·x
@@ -356,12 +674,40 @@ function integ(e: Expr, x: string): Expr {
       // pull out a constant factor
       if (!containsVar(e.left, x)) return mul(e.left, integ(e.right, x));
       if (!containsVar(e.right, x)) return mul(e.right, integ(e.left, x));
+      // integration by parts: ∫ x^n · f(a·x + b) dx, f ∈ {sin, cos, exp}
+      for (const [poly, other] of [
+        [e.left, e.right],
+        [e.right, e.left],
+      ] as const) {
+        const n = xPowerDegree(poly, x);
+        if (n !== null && other.type === "func" && isByPartsFunc(other.name) && linearCoeffs(other.arg, x)) {
+          return ibpPolyTimesFunc(n, other, x);
+        }
+      }
       throw new NotIntegrableError();
     }
     case "div": {
       if (!containsVar(e.right, x)) return div(integ(e.left, x), e.right); // ∫ u/c
       // 1/x -> ln x
       if (isConst(e.left, 1) && e.right.type === "var" && e.right.name === x) return fn("ln", v(x));
+      // numerator constant wrt x — check rational/radical forms with an x^2 denominator
+      if (!containsVar(e.left, x)) {
+        const c = evalExpr(e.left, {});
+        // ∫ c / (x^2 + k) dx = (c/√k)·atan(x/√k)   (k > 0, no linear term)
+        const quad = quadraticCoeffs(e.right, x);
+        if (quad && Math.abs(quad.a - 1) < 1e-9 && Math.abs(quad.b) < 1e-9 && quad.c > 0) {
+          const s = Math.sqrt(quad.c);
+          return mul(num(c / s), fn("atan", div(v(x), num(s))));
+        }
+        // ∫ c / √(k - x^2) dx = c·asin(x/√k)   (k > 0)
+        if (e.right.type === "func" && e.right.name === "sqrt") {
+          const under = quadraticCoeffs(e.right.arg, x);
+          if (under && Math.abs(under.a + 1) < 1e-9 && Math.abs(under.b) < 1e-9 && under.c > 0) {
+            const s = Math.sqrt(under.c);
+            return mul(num(c), fn("asin", div(v(x), num(s))));
+          }
+        }
+      }
       throw new NotIntegrableError();
     }
     case "pow": {
@@ -411,6 +757,56 @@ function linearCoeffs(e: Expr, x: string): { a: number; b: number } | null {
   }
 }
 
+/** If `e` is `a·x^2 + b·x + c` (a, b, c constant), return `{ a, b, c }`, else `null`. */
+function quadraticCoeffs(e: Expr, x: string): { a: number; b: number; c: number } | null {
+  try {
+    const at0 = evalExpr(e, { [x]: 0 });
+    const at1 = evalExpr(e, { [x]: 1 });
+    const atm1 = evalExpr(e, { [x]: -1 });
+    const c = at0;
+    const a = (at1 + atm1) / 2 - c;
+    const b = (at1 - atm1) / 2;
+    // verify quadratic-ness at a fourth point
+    const at2 = evalExpr(e, { [x]: 2 });
+    if (Math.abs(at2 - (4 * a + 2 * b + c)) > 1e-9) return null;
+    if (![a, b, c].every(Number.isFinite)) return null;
+    return { a, b, c };
+  } catch {
+    return null;
+  }
+}
+
+/** If `e` is `x` or `x^n` (positive integer n), return `n`, else `null`. */
+function xPowerDegree(e: Expr, x: string): number | null {
+  if (e.type === "var" && e.name === x) return 1;
+  if (
+    e.type === "pow" &&
+    e.base.type === "var" &&
+    e.base.name === x &&
+    e.exp.type === "const" &&
+    Number.isInteger(e.exp.value) &&
+    e.exp.value >= 1
+  ) {
+    return e.exp.value;
+  }
+  return null;
+}
+
+const BY_PARTS_FUNCS = new Set<FuncName>(["sin", "cos", "exp"]);
+function isByPartsFunc(name: FuncName): boolean {
+  return BY_PARTS_FUNCS.has(name);
+}
+
+/** ∫ x^n · f dx via repeated integration by parts, reducing the polynomial degree by 1 each step. */
+function ibpPolyTimesFunc(n: number, f: Expr, x: string): Expr {
+  if (n === 0) return integ(f, x);
+  const antideriv = integ(f, x);
+  const xn = n === 1 ? v(x) : pow(v(x), num(n));
+  const term = mul(xn, antideriv);
+  const rest = ibpPolyTimesFunc(n - 1, antideriv, x);
+  return sub(term, mul(num(n), rest));
+}
+
 // -- evaluation -------------------------------------------------------------
 function evalExpr(e: Expr, env: Record<string, number>): number {
   switch (e.type) {
@@ -445,6 +841,18 @@ function evalExpr(e: Expr, env: Record<string, number>): number {
           return Math.log(a);
         case "sqrt":
           return Math.sqrt(a);
+        case "asin":
+          return Math.asin(a);
+        case "acos":
+          return Math.acos(a);
+        case "atan":
+          return Math.atan(a);
+        case "sinh":
+          return Math.sinh(a);
+        case "cosh":
+          return Math.cosh(a);
+        case "tanh":
+          return Math.tanh(a);
       }
     }
   }
@@ -458,6 +866,12 @@ const FUNC_IMPLS: Record<FuncName, (x: number) => number> = {
   exp: Math.exp,
   ln: Math.log,
   sqrt: Math.sqrt,
+  asin: Math.asin,
+  acos: Math.acos,
+  atan: Math.atan,
+  sinh: Math.sinh,
+  cosh: Math.cosh,
+  tanh: Math.tanh,
 };
 
 function compileExpr(e: Expr): (env: Record<string, number>) => number {
@@ -532,6 +946,270 @@ function render(e: Expr, parentPrec: number): string {
   }
 }
 const wrap = (s: string, prec: number, parentPrec: number): string => (prec < parentPrec ? `(${s})` : s);
+
+// -- LaTeX rendering ----------------------------------------------------------
+const LATEX_FUNCS: Partial<Record<FuncName, string>> = {
+  sin: "\\sin",
+  cos: "\\cos",
+  tan: "\\tan",
+  exp: "\\exp",
+  ln: "\\ln",
+  asin: "\\arcsin",
+  acos: "\\arccos",
+  atan: "\\arctan",
+  sinh: "\\sinh",
+  cosh: "\\cosh",
+  tanh: "\\tanh",
+};
+
+function toLatexRec(e: Expr, parentPrec: number): string {
+  switch (e.type) {
+    case "const":
+      if (Math.abs(e.value - Math.PI) < 1e-12) return "\\pi";
+      if (Math.abs(e.value - Math.E) < 1e-12) return "e";
+      return `${e.value}`;
+    case "var":
+      return e.name;
+    case "func":
+      if (e.name === "sqrt") return `\\sqrt{${toLatexRec(e.arg, 0)}}`;
+      return `${LATEX_FUNCS[e.name]}\\left(${toLatexRec(e.arg, 0)}\\right)`;
+    case "neg":
+      return wrap(`-${toLatexRec(e.arg, PREC.neg)}`, PREC.neg, parentPrec);
+    case "pow":
+      return wrap(`${toLatexRec(e.base, PREC.pow + 1)}^{${toLatexRec(e.exp, 0)}}`, PREC.pow, parentPrec);
+    case "add":
+      return wrap(`${toLatexRec(e.left, PREC.add)} + ${toLatexRec(e.right, PREC.add)}`, PREC.add, parentPrec);
+    case "sub":
+      return wrap(`${toLatexRec(e.left, PREC.sub)} - ${toLatexRec(e.right, PREC.sub + 1)}`, PREC.sub, parentPrec);
+    case "mul":
+      return wrap(`${toLatexRec(e.left, PREC.mul)} \\cdot ${toLatexRec(e.right, PREC.mul + 1)}`, PREC.mul, parentPrec);
+    case "div":
+      // \frac is self-delimiting — never needs outer parens.
+      return `\\frac{${toLatexRec(e.left, 0)}}{${toLatexRec(e.right, 0)}}`;
+  }
+}
+
+// -- equation solving & factoring ----------------------------------------------
+/** Best-effort exact `Expr` for a numeric value: an integer, a reduced fraction, or (as a last resort) the raw float. */
+function toExactExpr(value: number): Expr {
+  if (Number.isInteger(value)) return num(value);
+  const r = Rational.fromNumber(value, 10_000);
+  if (r.denominator === 1n) return num(Number(r.numerator));
+  return div(num(Number(r.numerator)), num(Number(r.denominator)));
+}
+
+function evalPoly(coeffsLowToHigh: number[], p: number): number {
+  let result = 0;
+  for (let i = coeffsLowToHigh.length - 1; i >= 0; i--) result = result * p + coeffsLowToHigh[i];
+  return result;
+}
+
+/**
+ * Extract `[c0, c1, ..., cn]` such that `expr = c0 + c1·x + ... + cn·x^n`, via
+ * Taylor coefficients at 0 (`f^(n)(0)/n!`), verified against `expr` at a few
+ * probe points so non-polynomial expressions (e.g. `sin(x)`) are rejected
+ * rather than silently truncated. Returns `null` if `expr` isn't a polynomial
+ * of degree ≤ `maxDegree` in `variable`.
+ */
+function polynomialCoeffs(expr: Expr, variable: string, maxDegree: number): number[] | null {
+  const coeffs: number[] = [];
+  let term = expr;
+  let factorial = 1;
+  for (let n = 0; n <= maxDegree; n++) {
+    if (n > 0) factorial *= n;
+    const c0 = evalExpr(term, { [variable]: 0 });
+    if (!Number.isFinite(c0)) return null;
+    coeffs.push(c0 / factorial);
+    // Simplify between differentiation steps: an unsimplified term like the
+    // derivative of x^0 (`0·x^-1`) evaluates to `0·Infinity = NaN` at x=0
+    // even though it is symbolically zero — simplifying collapses `0·anything`
+    // to `0` before that indeterminate form can arise.
+    term = Symbolic.simplify(diff(term, variable));
+  }
+  while (coeffs.length > 1 && Math.abs(coeffs[coeffs.length - 1]) < 1e-9) coeffs.pop();
+  for (const p of [1.3, -2.1, 3.7]) {
+    const actual = evalExpr(expr, { [variable]: p });
+    if (!Number.isFinite(actual)) return null;
+    if (Math.abs(evalPoly(coeffs, p) - actual) > 1e-6 * Math.max(1, Math.abs(actual))) return null;
+  }
+  return coeffs;
+}
+
+function intGcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y) [x, y] = [y, x % y];
+  return x || 1;
+}
+
+function divisorsOf(n: number): number[] {
+  const a = Math.round(Math.abs(n));
+  if (a === 0) return [1];
+  const result: number[] = [];
+  for (let i = 1; i <= a; i++) if (a % i === 0) result.push(i);
+  return result;
+}
+
+/** Rational-root-theorem search for one root of an integer-coefficient polynomial (low-to-high `coeffs`). */
+function findRationalRoot(coeffs: number[]): number | null {
+  const n = coeffs.length - 1;
+  const rounded = coeffs.map((c) => Math.round(c));
+  const isIntegerPoly = coeffs.every((c, i) => Math.abs(c - rounded[i]) < 1e-6);
+  if (!isIntegerPoly) return null;
+  const pCands = divisorsOf(rounded[0]);
+  const qCands = divisorsOf(rounded[n]);
+  const tried = new Set<number>();
+  for (const p of pCands) {
+    for (const q of qCands) {
+      for (const sign of [1, -1]) {
+        const candidate = (sign * p) / q;
+        if (tried.has(candidate)) continue;
+        tried.add(candidate);
+        if (Math.abs(evalPoly(rounded, candidate)) < 1e-6) return candidate;
+      }
+    }
+  }
+  return null;
+}
+
+/** Synthetic division of a polynomial (low-to-high `coeffs`) by `(x - root)`; assumes `root` is an exact root. */
+function syntheticDivide(coeffsLowToHigh: number[], root: number): number[] {
+  const desc = [...coeffsLowToHigh].reverse();
+  const quotientDesc: number[] = [desc[0]];
+  for (let i = 1; i < desc.length - 1; i++) {
+    quotientDesc.push(desc[i] + root * quotientDesc[i - 1]);
+  }
+  return quotientDesc.reverse();
+}
+
+function solvePolynomial(coeffsIn: number[]): Expr[] {
+  const coeffs = [...coeffsIn];
+  while (coeffs.length > 1 && Math.abs(coeffs[coeffs.length - 1]) < 1e-9) coeffs.pop();
+  const n = coeffs.length - 1;
+  if (n <= 0) return [];
+  if (n === 1) {
+    const [c0, c1] = coeffs;
+    return [toExactExpr(-c0 / c1)];
+  }
+  if (n === 2) {
+    const [c0, c1, c2] = coeffs;
+    const disc = c1 * c1 - 4 * c2 * c0;
+    if (disc < -1e-9) return [];
+    const negB = -c1;
+    const twoA = 2 * c2;
+    if (Math.abs(disc) < 1e-9) return [toExactExpr(negB / twoA)];
+    const sqrtDisc = Math.sqrt(disc);
+    if (Math.abs(sqrtDisc - Math.round(sqrtDisc)) < 1e-9) {
+      return [toExactExpr((negB + sqrtDisc) / twoA), toExactExpr((negB - sqrtDisc) / twoA)];
+    }
+    const sqrtExpr = fn("sqrt", toExactExpr(disc));
+    return [
+      div(add(toExactExpr(negB), sqrtExpr), toExactExpr(twoA)),
+      div(sub(toExactExpr(negB), sqrtExpr), toExactExpr(twoA)),
+    ];
+  }
+  const root = findRationalRoot(coeffs);
+  if (root === null) {
+    throw new Error(
+      `solve: no closed-form root found for a degree-${n} polynomial (only rational roots are searched for degree ≥ 3).`,
+    );
+  }
+  const deflated = syntheticDivide(coeffs, root);
+  return [toExactExpr(root), ...solvePolynomial(deflated)];
+}
+
+/** Build `c0 + c1·x + c2·x^2 + ...` from low-to-high coefficients. */
+function polyToExpr(coeffs: number[], variable: string): Expr {
+  let result: Expr | null = null;
+  for (let i = 0; i < coeffs.length; i++) {
+    if (coeffs[i] === 0) continue;
+    const monomial =
+      i === 0 ? toExactExpr(coeffs[i]) : mul(toExactExpr(coeffs[i]), i === 1 ? v(variable) : pow(v(variable), num(i)));
+    result = result === null ? monomial : add(result, monomial);
+  }
+  return result ?? num(0);
+}
+
+function factorPolynomial(coeffsIn: number[], variable: string): Expr {
+  let coeffs = [...coeffsIn];
+  while (coeffs.length > 1 && Math.abs(coeffs[coeffs.length - 1]) < 1e-9) coeffs.pop();
+  if (coeffs.every((c) => Math.abs(c) < 1e-9)) return num(0);
+
+  let xPower = 0;
+  while (coeffs.length > 1 && Math.abs(coeffs[0]) < 1e-9) {
+    coeffs.shift();
+    xPower++;
+  }
+
+  const rounded = coeffs.map((c) => Math.round(c));
+  const isIntegerPoly = coeffs.every((c, i) => Math.abs(c - rounded[i]) < 1e-6);
+  let gcd = 1;
+  if (isIntegerPoly) {
+    gcd = rounded.reduce((g, c) => (c === 0 ? g : intGcd(g, Math.abs(c))), 0) || 1;
+    coeffs = rounded.map((c) => c / gcd);
+  }
+
+  const linearRoots: number[] = [];
+  let remaining = coeffs;
+  while (remaining.length - 1 >= 3) {
+    const root = findRationalRoot(remaining);
+    if (root === null) break;
+    linearRoots.push(root);
+    remaining = syntheticDivide(remaining, root);
+  }
+  if (remaining.length - 1 === 2) {
+    const [c0, c1, c2] = remaining;
+    const disc = c1 * c1 - 4 * c2 * c0;
+    if (disc >= 0) {
+      const sqrtDisc = Math.sqrt(disc);
+      if (Math.abs(sqrtDisc - Math.round(sqrtDisc)) < 1e-9) {
+        linearRoots.push((-c1 + sqrtDisc) / (2 * c2), (-c1 - sqrtDisc) / (2 * c2));
+        remaining = [c2];
+      }
+    }
+  } else if (remaining.length - 1 === 1) {
+    const [c0, c1] = remaining;
+    linearRoots.push(-c0 / c1);
+    remaining = [c1];
+  }
+
+  let result: Expr = toExactExpr(gcd);
+  if (xPower === 1) result = mul(result, v(variable));
+  else if (xPower > 1) result = mul(result, pow(v(variable), num(xPower)));
+  for (const r of linearRoots) {
+    result = mul(result, Math.abs(r) < 1e-9 ? v(variable) : sub(v(variable), toExactExpr(r)));
+  }
+  if (remaining.length > 1) {
+    result = mul(result, polyToExpr(remaining, variable));
+  } else if (Math.abs(remaining[0] - 1) > 1e-9) {
+    result = mul(result, toExactExpr(remaining[0]));
+  }
+  return Symbolic.simplify(result);
+}
+
+// -- limits ---------------------------------------------------------------------
+function evalNear(e: Expr, x: string, point: number, direction: "left" | "right" | "both"): number {
+  if (direction === "both") return evalExpr(e, { [x]: point });
+  const eps = direction === "right" ? 1e-6 : -1e-6;
+  return evalExpr(e, { [x]: point + eps });
+}
+
+function limitAt(e: Expr, x: string, point: number, direction: "left" | "right" | "both", depth: number): number {
+  const direct = evalNear(e, x, point, direction);
+  if (Number.isFinite(direct)) return direct;
+  if (e.type === "div" && depth < 12) {
+    const fAt = evalNear(e.left, x, point, direction);
+    const gAt = evalNear(e.right, x, point, direction);
+    const indeterminate =
+      (Math.abs(fAt) < 1e-6 && Math.abs(gAt) < 1e-6) || (!Number.isFinite(fAt) && !Number.isFinite(gAt));
+    if (indeterminate) {
+      const df = diff(e.left, x);
+      const dg = diff(e.right, x);
+      return limitAt(div(df, dg), x, point, direction, depth + 1);
+    }
+  }
+  return direct;
+}
 
 // -- recursive-descent parser ----------------------------------------------
 class Parser {
