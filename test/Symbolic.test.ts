@@ -89,3 +89,34 @@ test("compile walks the AST once and can be reused across many envs", () => {
   assert.equal(compiled({ x: 4 }), 16);
   assert.equal(compiled({ x: -2 }), 4);
 });
+
+test("differentiateSteps result matches differentiate", () => {
+  const { result } = Symbolic.differentiateSteps("x^2 + 2*x + 1");
+  assert.equal(Symbolic.toString(result), Symbolic.toString(Symbolic.differentiate("x^2 + 2*x + 1")));
+});
+
+test("differentiateSteps records one step per subexpression, innermost first", () => {
+  const { steps } = Symbolic.differentiateSteps("x^2 + 3*x");
+  const rules = steps.map((s) => s.rule);
+  // x^2 and 3*x differentiate before the top-level sum combines them.
+  assert.ok(rules.includes("Power Rule"));
+  assert.ok(rules.includes("Product Rule"));
+  assert.equal(rules[rules.length - 1], "Sum Rule");
+});
+
+test("differentiateSteps names the chain rule with the outer function", () => {
+  const { steps } = Symbolic.differentiateSteps("sin(x^2)");
+  const outer = steps[steps.length - 1];
+  assert.equal(outer.rule, "Chain Rule (sin)");
+  assert.equal(Symbolic.toString(outer.input), "sin(x^2)");
+});
+
+test("differentiateSteps on a bare constant/variable records a single leaf step", () => {
+  const constSteps = Symbolic.differentiateSteps("5").steps;
+  assert.equal(constSteps.length, 1);
+  assert.equal(constSteps[0].rule, "Constant Rule");
+
+  const varSteps = Symbolic.differentiateSteps("x").steps;
+  assert.equal(varSteps.length, 1);
+  assert.equal(varSteps[0].rule, "Variable Rule");
+});

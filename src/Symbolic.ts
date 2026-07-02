@@ -66,6 +66,20 @@ export class Symbolic {
     return Symbolic.simplify(diff(e, variable));
   }
 
+  /**
+   * Like {@link differentiate}, but also returns a bottom-up trace of every
+   * differentiation rule applied — one step per subexpression, innermost
+   * first — for a "show your work" UI. Each step's `input`/`output` are
+   * unsimplified, matching the mechanical rule application; `result` is the
+   * final simplified derivative (same as `differentiate` would return).
+   */
+  static differentiateSteps(expr: Expr | string, variable = "x"): { steps: DifferentiationStep[]; result: Expr } {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    const steps: DifferentiationStep[] = [];
+    const raw = diffTraced(e, variable, steps);
+    return { steps, result: Symbolic.simplify(raw) };
+  }
+
   static simplify(expr: Expr | string): Expr {
     let e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
     for (let i = 0; i < 30; i++) {
@@ -120,6 +134,92 @@ export class Symbolic {
 }
 
 // -- differentiation --------------------------------------------------------
+
+/** One rule application recorded by {@link Symbolic.differentiateSteps}. */
+export interface DifferentiationStep {
+  /** Human-readable name of the differentiation rule applied, e.g. "Product Rule". */
+  rule: string;
+  /** The subexpression this rule was applied to. */
+  input: Expr;
+  /** The (unsimplified) derivative of `input` produced by this rule. */
+  output: Expr;
+}
+
+function diffTraced(e: Expr, x: string, steps: DifferentiationStep[]): Expr {
+  let rule: string;
+  let result: Expr;
+  switch (e.type) {
+    case "const":
+      rule = "Constant Rule";
+      result = num(0);
+      break;
+    case "var":
+      rule = e.name === x ? "Variable Rule" : "Constant Rule";
+      result = num(e.name === x ? 1 : 0);
+      break;
+    case "add":
+      rule = "Sum Rule";
+      result = add(diffTraced(e.left, x, steps), diffTraced(e.right, x, steps));
+      break;
+    case "sub":
+      rule = "Difference Rule";
+      result = sub(diffTraced(e.left, x, steps), diffTraced(e.right, x, steps));
+      break;
+    case "mul":
+      rule = "Product Rule";
+      result = add(mul(diffTraced(e.left, x, steps), e.right), mul(e.left, diffTraced(e.right, x, steps)));
+      break;
+    case "div":
+      rule = "Quotient Rule";
+      result = div(
+        sub(mul(diffTraced(e.left, x, steps), e.right), mul(e.left, diffTraced(e.right, x, steps))),
+        pow(e.right, num(2)),
+      );
+      break;
+    case "neg":
+      rule = "Negation Rule";
+      result = neg(diffTraced(e.arg, x, steps));
+      break;
+    case "pow":
+      if (e.exp.type === "const") {
+        rule = "Power Rule";
+        result = mul(mul(e.exp, pow(e.base, num(e.exp.value - 1))), diffTraced(e.base, x, steps));
+      } else {
+        rule = "Generalized Power Rule";
+        result = mul(e, add(mul(diffTraced(e.exp, x, steps), fn("ln", e.base)), mul(e.exp, div(diffTraced(e.base, x, steps), e.base))));
+      }
+      break;
+    case "func": {
+      rule = `Chain Rule (${e.name})`;
+      const u = e.arg;
+      const du = diffTraced(u, x, steps);
+      switch (e.name) {
+        case "sin":
+          result = mul(fn("cos", u), du);
+          break;
+        case "cos":
+          result = neg(mul(fn("sin", u), du));
+          break;
+        case "tan":
+          result = div(du, pow(fn("cos", u), num(2)));
+          break;
+        case "exp":
+          result = mul(fn("exp", u), du);
+          break;
+        case "ln":
+          result = div(du, u);
+          break;
+        case "sqrt":
+          result = div(du, mul(num(2), fn("sqrt", u)));
+          break;
+      }
+      break;
+    }
+  }
+  steps.push({ rule, input: e, output: result });
+  return result;
+}
+
 function diff(e: Expr, x: string): Expr {
   switch (e.type) {
     case "const":
