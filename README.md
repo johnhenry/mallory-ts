@@ -10,7 +10,7 @@ graphing geometry — all rewritten in modern TypeScript with `node:test`
 (example-based and, for algebraic laws, property-based via `fast-check`).
 
 ```ts
-import { ComplexNumber, Structure, Vector, StringEvaluator } from "mallory-ts";
+import { ComplexNumber, Structure, Vector, StringEvaluator } from "mallory-math";
 
 ComplexNumber.E.power(new ComplexNumber(0, Math.PI)); // ≈ -1  (Euler)
 Structure.realField().determinant(/* 3×3 matrix, as Vector<Vector<number>> */);

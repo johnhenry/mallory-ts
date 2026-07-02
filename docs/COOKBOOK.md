@@ -7,13 +7,13 @@ against it) — see the linked test file if you want the full context.
 All examples assume:
 
 ```ts
-import { /* ... */ } from "mallory-ts";
+import { /* ... */ } from "mallory-math";
 ```
 
 ## Complex numbers & Euler's identity
 
 ```ts
-import { ComplexNumber } from "mallory-ts";
+import { ComplexNumber } from "mallory-math";
 
 const eulers = ComplexNumber.E.power(new ComplexNumber(0, Math.PI));
 // eulers ≈ -1 + 0i
@@ -24,7 +24,7 @@ See [`test/ComplexNumber.test.ts`](../test/ComplexNumber.test.ts).
 ## Descriptive statistics
 
 ```ts
-import { Statistics, Vector } from "mallory-ts";
+import { Statistics, Vector } from "mallory-math";
 
 const sample = Vector.fromArray([2, 4, 4, 4, 5, 5, 7, 9]);
 Statistics.mean(sample); // 5
@@ -39,7 +39,7 @@ For small dense matrices with a single number type, `Structure.realField()`
 API used for arbitrary fields below:
 
 ```ts
-import { Structure, Vector } from "mallory-ts";
+import { Structure, Vector } from "mallory-math";
 
 const A = Vector.fromArray([Vector.fromArray([4, 3]), Vector.fromArray([6, 3])]);
 const real = Structure.realField();
@@ -54,7 +54,7 @@ real.multiplyMatrix(A, inv); // ≈ identity
 finite fields, rationals, quaternions, dual numbers — via one generic API:
 
 ```ts
-import { Structure, Vector } from "mallory-ts";
+import { Structure, Vector } from "mallory-math";
 
 const gf7 = Structure.integersModulo(7); // GF(7), a finite field
 gf7.reciprocal(3); // 5  (3 * 5 = 15 ≡ 1 mod 7)
@@ -75,7 +75,7 @@ over those number types with no extra wiring. See
 `MatrixMath` accepts either a `Matrix<number>` or a plain `number[][]`:
 
 ```ts
-import { MatrixMath } from "mallory-ts";
+import { MatrixMath } from "mallory-math";
 
 const A = [
   [4, 3, 2],
@@ -100,7 +100,7 @@ See [`test/MatrixMath.test.ts`](../test/MatrixMath.test.ts).
 ## Evaluating math expression strings
 
 ```ts
-import { StringEvaluator } from "mallory-ts";
+import { StringEvaluator } from "mallory-math";
 
 const env = StringEvaluator.mathEnvironment(); // pi, e, sin, cos, sqrt, ...
 StringEvaluator.evaluate("sin(pi/2) + 2^3", env); // ComplexNumber ≈ 9
@@ -116,7 +116,7 @@ Real-number polynomials are `PolynomialRing(Structure.realField())`, plus two
 real-only helpers for the `"3*x^2-2*x+1"` string notation:
 
 ```ts
-import { PolynomialRing, Structure, parsePolynomial, polynomialToString } from "mallory-ts";
+import { PolynomialRing, Structure, parsePolynomial, polynomialToString } from "mallory-math";
 
 const R = new PolynomialRing(Structure.realField());
 const p = parsePolynomial("x^2 + 2x + 1"); // parses polynomialToString's own format
@@ -129,7 +129,7 @@ polynomialToString(p); // "1*x^2+2*x+1"
 ## Counting mathematics (combinatorics)
 
 ```ts
-import { Combinatorics } from "mallory-ts";
+import { Combinatorics } from "mallory-math";
 
 Combinatorics.factorial(5); // 120n
 Combinatorics.binomial(10, 3); // 120n  (nCk, symmetric: nCk = nC(n-k))
@@ -151,7 +151,7 @@ reaches 20. See
 ## Arbitrary-precision decimals
 
 ```ts
-import { Decimal, Structure } from "mallory-ts";
+import { Decimal, Structure } from "mallory-math";
 
 // Exact decimal arithmetic — no float drift:
 Decimal.from("0.1").add(Decimal.from("0.2")).toString(); // "0.3" (0.1 + 0.2 !== 0.3 in plain JS)
@@ -173,7 +173,7 @@ real numbers (as in the recipe above), and so on — mirroring `GroupTheory`'s
 idiom of taking the algebra as a constructor parameter:
 
 ```ts
-import { PolynomialRing, Structure } from "mallory-ts";
+import { PolynomialRing, Structure } from "mallory-math";
 
 const gf7 = Structure.integersModulo(7); // GF(7), a finite field
 const R = new PolynomialRing(gf7);
@@ -193,7 +193,7 @@ rationals. See
 ## Symbolic calculus
 
 ```ts
-import { Symbolic } from "mallory-ts";
+import { Symbolic } from "mallory-math";
 
 Symbolic.toString(Symbolic.differentiate("x^3")); // "3*x^2"
 Symbolic.toString(Symbolic.integrate("cos(x)")); // "sin(x)"
@@ -208,7 +208,7 @@ rather than returning a wrong answer — e.g. `Symbolic.integrate("sin(x^2)")`.
 ## Multivariable calculus
 
 ```ts
-import { DualNumber, VectorCalculus } from "mallory-ts";
+import { DualNumber, VectorCalculus } from "mallory-math";
 
 // f(x, y) = x^2*y + y^3
 const f = (xs: DualNumber[]) => xs[0].pow(2).multiply(xs[1]).add(xs[1].pow(3));
@@ -237,7 +237,7 @@ gradient, not of `f` itself. See
 ## Exact and specialized number types
 
 ```ts
-import { Rational, Quaternion, DualNumber, Interval } from "mallory-ts";
+import { Rational, Quaternion, DualNumber, Interval } from "mallory-math";
 
 // Exact fractions (no floating-point drift)
 Rational.from(1).divide(new Rational(3n)).add(Rational.from(1).divide(new Rational(6n))); // 1/2 exactly
@@ -258,7 +258,7 @@ See [`test/NumberTypes.test.ts`](../test/NumberTypes.test.ts).
 ## Number theory
 
 ```ts
-import { NumberTheory } from "mallory-ts";
+import { NumberTheory } from "mallory-math";
 
 NumberTheory.isProbablePrime(2n ** 61n - 1n); // true (Mersenne prime)
 NumberTheory.isProbablePrime(561n); // false (Carmichael number — not a false positive)
@@ -272,7 +272,7 @@ Everything here is `bigint`-based, so it's exact for arbitrarily large inputs
 ## Group theory
 
 ```ts
-import { Structure, GroupTheory } from "mallory-ts";
+import { Structure, GroupTheory } from "mallory-math";
 
 // GroupTheory composes with any Structure preset:
 const gf7 = Structure.integersModulo(7);
@@ -291,7 +291,7 @@ non-abelian example and the Lagrange's-theorem cosets/index check.
 ## Root-finding, quadrature, and ODEs
 
 ```ts
-import { Numerical } from "mallory-ts";
+import { Numerical } from "mallory-math";
 
 Numerical.newton((x) => x * x - 2, 1); // √2, quadratic convergence
 Numerical.brent((x) => x * x - 2, 0, 2); // hybrid bisection/secant/inverse-quadratic
@@ -305,7 +305,7 @@ Numerical.rk4((_t, y) => [y[0]], [1], 0, 1, 0.01); // y' = y, y(0)=1 -> y(1) ≈
 ## Special functions & probability
 
 ```ts
-import { SpecialFunctions, Distributions, HypothesisTests } from "mallory-ts";
+import { SpecialFunctions, Distributions, HypothesisTests } from "mallory-math";
 
 SpecialFunctions.gamma(5); // 24  (4!)
 SpecialFunctions.regularizedIncompleteBeta(0.5, 2, 3);
@@ -324,7 +324,7 @@ rather than numeric integration.
 ## FFT and convolution
 
 ```ts
-import { FFT } from "mallory-ts";
+import { FFT } from "mallory-math";
 
 FFT.fft([1, 0, 0, 0]); // flat spectrum (power-of-two length required)
 FFT.fftPadded([1, 2, 3]); // zero-pads to the next power of two
@@ -334,7 +334,7 @@ FFT.convolve([1, 2, 3], [4, 5, 6]); // [4, 13, 28, 27, 18], via FFT
 ## Computational geometry
 
 ```ts
-import { Geometry, Transform2D, type Point } from "mallory-ts";
+import { Geometry, Transform2D, type Point } from "mallory-math";
 
 const cloud: Point[] = [[0,0],[1,1],[2,2],[2,0],[0,2],[1,0.5]];
 Geometry.convexHull(cloud); // the 4 outer corners; interior/collinear points drop out
@@ -349,7 +349,7 @@ t.apply([1, 0]); // rotate then translate -> [1, 3]
 ## Graph algorithms
 
 ```ts
-import { Graph } from "mallory-ts";
+import { Graph } from "mallory-math";
 
 const g = new Graph<string>(true); // directed
 g.addEdge("a", "b", 1).addEdge("b", "c", 2).addEdge("a", "c", 10);
@@ -363,7 +363,7 @@ g.floydWarshall(); // { distances, order } — all-pairs shortest paths
 ## Permutations and cycles
 
 ```ts
-import { Permutation, Cycle } from "mallory-ts";
+import { Permutation, Cycle } from "mallory-math";
 
 const sigma = new Permutation([0, 1, 2], [1, 2, 0]); // 0->1, 1->2, 2->0
 Permutation.compose(sigma, sigma); // apply sigma twice
