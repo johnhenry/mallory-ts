@@ -104,6 +104,16 @@ export class Symbolic {
     return evalExpr(e, env);
   }
 
+  /**
+   * Compile `expr` into a closure tree, walking the AST once instead of on
+   * every call. Prefer this over {@link evaluate} when the same expression is
+   * evaluated many times (e.g. sampling a curve across hundreds of x values).
+   */
+  static compile(expr: Expr | string): (env: Record<string, number>) => number {
+    const e = typeof expr === "string" ? Symbolic.parse(expr) : expr;
+    return compileExpr(e);
+  }
+
   static toString(expr: Expr | string): string {
     return render(typeof expr === "string" ? Symbolic.parse(expr) : expr, 0);
   }
@@ -330,6 +340,63 @@ function evalExpr(e: Expr, env: Record<string, number>): number {
         case "sqrt":
           return Math.sqrt(a);
       }
+    }
+  }
+}
+
+// -- compilation --------------------------------------------------------------
+const FUNC_IMPLS: Record<FuncName, (x: number) => number> = {
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  exp: Math.exp,
+  ln: Math.log,
+  sqrt: Math.sqrt,
+};
+
+function compileExpr(e: Expr): (env: Record<string, number>) => number {
+  switch (e.type) {
+    case "const": {
+      const value = e.value;
+      return () => value;
+    }
+    case "var": {
+      const name = e.name;
+      return (env) => env[name] ?? Number.NaN;
+    }
+    case "add": {
+      const l = compileExpr(e.left);
+      const r = compileExpr(e.right);
+      return (env) => l(env) + r(env);
+    }
+    case "sub": {
+      const l = compileExpr(e.left);
+      const r = compileExpr(e.right);
+      return (env) => l(env) - r(env);
+    }
+    case "mul": {
+      const l = compileExpr(e.left);
+      const r = compileExpr(e.right);
+      return (env) => l(env) * r(env);
+    }
+    case "div": {
+      const l = compileExpr(e.left);
+      const r = compileExpr(e.right);
+      return (env) => l(env) / r(env);
+    }
+    case "pow": {
+      const b = compileExpr(e.base);
+      const p = compileExpr(e.exp);
+      return (env) => b(env) ** p(env);
+    }
+    case "neg": {
+      const a = compileExpr(e.arg);
+      return (env) => -a(env);
+    }
+    case "func": {
+      const a = compileExpr(e.arg);
+      const impl = FUNC_IMPLS[e.name];
+      return (env) => impl(a(env));
     }
   }
 }

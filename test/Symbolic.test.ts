@@ -62,3 +62,30 @@ test("taylor expansion of exp about 0", () => {
   assert.ok(Math.abs(Symbolic.evaluate(t, { x: 1 }) - (1 + 1 + 0.5 + 1 / 6 + 1 / 24)) < 1e-12);
   void evalAt;
 });
+
+test("compile matches evaluate across expression shapes", () => {
+  const cases: Array<[string, Record<string, number>]> = [
+    ["2 + 3*4", {}],
+    ["2^3^2", {}],
+    ["sin(pi/2)", {}],
+    ["x^2 + 1", { x: 3 }],
+    ["sin(x^2) + 2*x - 1", { x: 1.7 }],
+    ["-x / (y + 1)", { x: 4, y: 2 }],
+    ["sqrt(x) + ln(x) + tan(x)", { x: 2.5 }],
+  ];
+  for (const [expr, env] of cases) {
+    const compiled = Symbolic.compile(expr)(env);
+    const evaluated = Symbolic.evaluate(expr, env);
+    assert.ok(
+      Math.abs(compiled - evaluated) < 1e-12 || (Number.isNaN(compiled) && Number.isNaN(evaluated)),
+      `compile/evaluate mismatch for "${expr}": ${compiled} vs ${evaluated}`,
+    );
+  }
+});
+
+test("compile walks the AST once and can be reused across many envs", () => {
+  const compiled = Symbolic.compile("x^2");
+  assert.equal(compiled({ x: 3 }), 9);
+  assert.equal(compiled({ x: 4 }), 16);
+  assert.equal(compiled({ x: -2 }), 4);
+});
