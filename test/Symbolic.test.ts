@@ -240,3 +240,31 @@ test("toLatex renders fractions, radicals, and named functions", () => {
   assert.equal(Symbolic.toLatex("sqrt(x+1)"), "\\sqrt{x + 1}");
   assert.equal(Symbolic.toLatex("sin(x)/cos(x)"), "\\frac{\\sin\\left(x\\right)}{\\cos\\left(x\\right)}");
 });
+
+test("fromLatex round-trips everything toLatex produces", () => {
+  for (const src of ["x^2/2", "sqrt(x+1)", "sin(x)/cos(x)", "a*b + c", "x^2 - 5*x + 6", "sinh(x) + cosh(x)"]) {
+    const roundTripped = Symbolic.toString(Symbolic.fromLatex(Symbolic.toLatex(src)));
+    assert.equal(roundTripped, Symbolic.toString(Symbolic.parse(src)));
+  }
+});
+
+test("fromLatex parses fractions, radicals, and named function commands", () => {
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("\\frac{a}{b}")), "a/b");
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("\\sqrt{x+1}")), "sqrt(x + 1)");
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("\\sin\\left(x\\right)")), "sin(x)");
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("\\arcsin(x)")), "asin(x)");
+  assert.equal(Symbolic.evaluate(Symbolic.fromLatex("\\sqrt[3]{x}"), { x: 8 }), 2);
+});
+
+test("fromLatex handles \\cdot/\\times, \\pi, braced exponents, and subscripts", () => {
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("2 \\cdot x + 3 \\times y")), "2*x + 3*y");
+  assert.equal(Symbolic.evaluate(Symbolic.fromLatex("\\pi \\cdot x"), { x: 1 }), Math.PI);
+  assert.equal(Symbolic.evaluate(Symbolic.fromLatex("\\frac{x^{2}}{2}"), { x: 4 }), 8);
+  assert.equal(Symbolic.toString(Symbolic.fromLatex("x^{2} + y_{1}")), "x^2 + y_1");
+});
+
+test("fromLatex throws on constructs with no Expr equivalent", () => {
+  assert.throws(() => Symbolic.fromLatex("\\int_0^1 x\\,dx"));
+  assert.throws(() => Symbolic.fromLatex("\\sum_{i=1}^n i"));
+  assert.throws(() => Symbolic.fromLatex("\\left|x\\right|"));
+});

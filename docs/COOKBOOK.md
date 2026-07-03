@@ -212,6 +212,10 @@ Symbolic.toString(Symbolic.factor("x^2 - 1")); // "(x - 1)*(x + 1)"
 
 Symbolic.limit("sin(x)/x", "x", 0); // 1 — via L'Hopital's rule
 Symbolic.toLatex("x^2/2"); // "\\frac{x^{2}}{2}"
+
+// fromLatex is the reverse of toLatex, for LaTeX-emitting math-field input:
+Symbolic.toString(Symbolic.fromLatex("\\frac{x^{2}}{2}")); // "x^2/2"
+Symbolic.toString(Symbolic.fromLatex("\\sqrt[3]{x}")); // "x^(1/3)"
 ```
 
 Integration covers the elementary rules (power rule, `1/x`, linear-substitution

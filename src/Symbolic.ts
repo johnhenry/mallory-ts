@@ -171,6 +171,21 @@ export class Symbolic {
   }
 
   /**
+   * Parse a LaTeX math string into an `Expr` — the reverse of {@link toLatex}.
+   * Round-trips everything `toLatex` produces: `\frac{a}{b}`, `\sqrt{a}` /
+   * `\sqrt[n]{a}`, `\left(...\right)`, `\cdot`/`\times`, `\pi`, `^{...}`
+   * exponents, `_{...}` subscripts, and the named function commands (`\sin`,
+   * `\arcsin`, `\sinh`, ...). Spacing commands (`\,`, `\;`, `\!`, `\quad`) are
+   * ignored.
+   *
+   * @throws on LaTeX constructs with no `Expr` equivalent, e.g. `\int`,
+   *   `\sum`, or `\left|...\right|` (absolute value).
+   */
+  static fromLatex(latex: string): Expr {
+    return Symbolic.parse(latexToInfix(latex));
+  }
+
+  /**
    * Solve `expr = 0` for `variable`, returning every *real* root mallory-math
    * can find as an exact `Expr` (rationals and `sqrt`-radicals where
    * possible) — complex roots are not returned (e.g. `x^2 + 1` yields `[]`).
@@ -987,6 +1002,129 @@ function toLatexRec(e: Expr, parentPrec: number): string {
       // \frac is self-delimiting — never needs outer parens.
       return `\\frac{${toLatexRec(e.left, 0)}}{${toLatexRec(e.right, 0)}}`;
   }
+}
+
+// -- LaTeX parsing (fromLatex) ------------------------------------------------
+const LATEX_FUNC_NAMES: Partial<Record<string, FuncName>> = Object.fromEntries(
+  Object.entries(LATEX_FUNCS).map(([name, latex]) => [latex, name as FuncName]),
+);
+
+/** Find the index of the delimiter matching `open` at `s[start]`, honoring nesting. */
+function findGroupEnd(s: string, start: number, open: string, close: string): number {
+  let depth = 0;
+  for (let i = start; i < s.length; i++) {
+    if (s[i] === open) depth++;
+    else if (s[i] === close) {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  throw new Error(`Unmatched '${open}' in LaTeX source`);
+}
+
+/** Extract the `{...}`/`(...)`/`[...]` group starting at `s[pos]` (the opening delimiter itself). */
+function extractGroup(s: string, pos: number): { content: string; next: number } {
+  const open = s[pos];
+  const close = open === "{" ? "}" : open === "(" ? ")" : open === "[" ? "]" : undefined;
+  if (!close) throw new Error(`Expected a group starting with '{', '(' or '[' at position ${pos}`);
+  const end = findGroupEnd(s, pos, open, close);
+  return { content: s.slice(pos + 1, end), next: end + 1 };
+}
+
+/** Convert a LaTeX math string into the plain-infix syntax `Symbolic.parse`'s `Parser` understands. */
+function latexToInfix(latex: string): string {
+  const cleaned = latex.replace(/\\left|\\right/g, "").replace(/\\(?:,|;|!|quad|qquad| )/g, "");
+  return transformLatex(cleaned);
+}
+
+function transformLatex(s: string): string {
+  let out = "";
+  let i = 0;
+
+  const readGroup = (): string => {
+    if (s[i] !== "{") throw new Error(`Expected '{' at position ${i} in LaTeX source: ${s}`);
+    const { content, next } = extractGroup(s, i);
+    i = next;
+    return content;
+  };
+
+  const readGroupOrParenOrToken = (): string => {
+    if (s[i] === "{" || s[i] === "(") {
+      const { content, next } = extractGroup(s, i);
+      i = next;
+      return content;
+    }
+    const m = /^[a-zA-Z_]\w*|^\d+\.?\d*(?:[eE][+-]?\d+)?/.exec(s.slice(i));
+    if (m) {
+      i += m[0].length;
+      return m[0];
+    }
+    throw new Error(`Expected an argument at position ${i} in LaTeX source: ${s}`);
+  };
+
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === "\\") {
+      const cmdMatch = /^\\[a-zA-Z]+/.exec(s.slice(i));
+      if (!cmdMatch) throw new Error(`Unsupported LaTeX construct at position ${i}: ${s.slice(i, i + 10)}`);
+      const cmd = cmdMatch[0];
+      i += cmd.length;
+      if (cmd === "\\cdot" || cmd === "\\times") {
+        out += "*";
+        continue;
+      }
+      if (cmd === "\\pi") {
+        out += "pi";
+        continue;
+      }
+      if (cmd === "\\frac") {
+        const numerator = readGroup();
+        const denominator = readGroup();
+        out += `((${transformLatex(numerator)})/(${transformLatex(denominator)}))`;
+        continue;
+      }
+      if (cmd === "\\sqrt") {
+        if (s[i] === "[") {
+          const { content: root, next } = extractGroup(s, i);
+          i = next;
+          const arg = readGroup();
+          out += `((${transformLatex(arg)})^(1/(${transformLatex(root)})))`;
+        } else {
+          const arg = readGroup();
+          out += `sqrt(${transformLatex(arg)})`;
+        }
+        continue;
+      }
+      const funcName = LATEX_FUNC_NAMES[cmd];
+      if (funcName) {
+        const arg = readGroupOrParenOrToken();
+        out += `${funcName}(${transformLatex(arg)})`;
+        continue;
+      }
+      throw new Error(`Unsupported LaTeX construct: ${cmd}`);
+    }
+    if (ch === "^" && s[i + 1] === "{") {
+      const { content, next } = extractGroup(s, i + 1);
+      i = next;
+      out += `^(${transformLatex(content)})`;
+      continue;
+    }
+    if (ch === "_" && s[i + 1] === "{") {
+      const { content, next } = extractGroup(s, i + 1);
+      i = next;
+      out += `_${content.replace(/\W/g, "")}`;
+      continue;
+    }
+    if (ch === "{") {
+      const { content, next } = extractGroup(s, i);
+      i = next;
+      out += `(${transformLatex(content)})`;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
 }
 
 // -- equation solving & factoring ----------------------------------------------
