@@ -5,6 +5,7 @@
  * limits, LaTeX rendering, and numeric evaluation.
  */
 import { Rational } from "./Rational.ts";
+import { SpecialFunctions } from "./SpecialFunctions.ts";
 
 export type FuncName =
   | "sin"
@@ -18,7 +19,36 @@ export type FuncName =
   | "atan"
   | "sinh"
   | "cosh"
-  | "tanh";
+  | "tanh"
+  | "cot"
+  | "sec"
+  | "csc"
+  | "asinh"
+  | "acosh"
+  | "atanh"
+  | "coth"
+  | "sech"
+  | "csch"
+  | "acot"
+  | "asec"
+  | "acsc"
+  | "acoth"
+  | "asech"
+  | "acsch"
+  | "abs"
+  | "log10"
+  | "log2"
+  | "cbrt"
+  | "floor"
+  | "ceil"
+  | "round"
+  | "sign"
+  | "trunc"
+  | "expm1"
+  | "log1p"
+  | "sigmoid"
+  | "erf"
+  | "relu";
 
 export type Expr =
   | { type: "const"; value: number }
@@ -31,7 +61,79 @@ export type Expr =
   | { type: "neg"; arg: Expr }
   | { type: "func"; name: FuncName; arg: Expr };
 
-const FUNCS: FuncName[] = ["sin", "cos", "tan", "exp", "ln", "sqrt", "asin", "acos", "atan", "sinh", "cosh", "tanh"];
+const FUNCS: FuncName[] = [
+  "sin",
+  "cos",
+  "tan",
+  "exp",
+  "ln",
+  "sqrt",
+  "asin",
+  "acos",
+  "atan",
+  "sinh",
+  "cosh",
+  "tanh",
+  "cot",
+  "sec",
+  "csc",
+  "asinh",
+  "acosh",
+  "atanh",
+  "coth",
+  "sech",
+  "csch",
+  "acot",
+  "asec",
+  "acsc",
+  "acoth",
+  "asech",
+  "acsch",
+  "abs",
+  "log10",
+  "log2",
+  "cbrt",
+  "floor",
+  "ceil",
+  "round",
+  "sign",
+  "trunc",
+  "expm1",
+  "log1p",
+  "sigmoid",
+  "erf",
+  "relu",
+];
+
+/**
+ * Alternate plain-text spellings accepted by {@link Symbolic.parse}, mapped to
+ * their canonical `FuncName` — e.g. `arcsin(x)` parses identically to
+ * `asin(x)`.
+ */
+const FUNC_ALIASES: Record<string, FuncName> = {
+  arcsin: "asin",
+  arccos: "acos",
+  arctan: "atan",
+  arcsinh: "asinh",
+  arccosh: "acosh",
+  arctanh: "atanh",
+  arccot: "acot",
+  arcsec: "asec",
+  arccsc: "acsc",
+  arccoth: "acoth",
+  arcsech: "asech",
+  arccsch: "acsch",
+  sgn: "sign",
+  logistic: "sigmoid",
+};
+
+/**
+ * Every function name {@link Symbolic.parse} recognizes — canonical spellings
+ * plus alternate ones like `arcsin` — for consumers (e.g. a UI's implicit-
+ * multiplication preprocessor) that need to know what counts as a known
+ * identifier without hand-duplicating this list.
+ */
+export const FUNCTION_NAMES: readonly string[] = [...FUNCS, ...Object.keys(FUNC_ALIASES)];
 
 // -- constructors -----------------------------------------------------------
 const num = (value: number): Expr => ({ type: "const", value });
@@ -173,13 +275,14 @@ export class Symbolic {
   /**
    * Parse a LaTeX math string into an `Expr` — the reverse of {@link toLatex}.
    * Round-trips everything `toLatex` produces: `\frac{a}{b}`, `\sqrt{a}` /
-   * `\sqrt[n]{a}`, `\left(...\right)`, `\cdot`/`\times`, `\pi`, `^{...}`
-   * exponents, `_{...}` subscripts, and the named function commands (`\sin`,
-   * `\arcsin`, `\sinh`, ...). Spacing commands (`\,`, `\;`, `\!`, `\quad`) are
-   * ignored.
+   * `\sqrt[3]{a}` (as `cbrt`) / `\sqrt[n]{a}`, `\left(...\right)`,
+   * `\left|...\right|` (absolute value), `\left\lfloor...\right\rfloor` /
+   * `\left\lceil...\right\rceil`, `\log_{10}`/`\log_{2}`, `\cdot`/`\times`,
+   * `\pi`, `^{...}` exponents, `_{...}` subscripts, and the named function
+   * commands (`\sin`, `\arcsin`, `\sinh`, `\operatorname{sech}`, ...). Spacing
+   * commands (`\,`, `\;`, `\!`, `\quad`) are ignored.
    *
-   * @throws on LaTeX constructs with no `Expr` equivalent, e.g. `\int`,
-   *   `\sum`, or `\left|...\right|` (absolute value).
+   * @throws on LaTeX constructs with no `Expr` equivalent, e.g. `\int` or `\sum`.
    */
   static fromLatex(latex: string): Expr {
     return Symbolic.parse(latexToInfix(latex));
@@ -339,6 +442,85 @@ function diffTraced(e: Expr, x: string, steps: DifferentiationStep[]): Expr {
         case "tanh":
           result = div(du, pow(fn("cosh", u), num(2)));
           break;
+        case "cot":
+          result = neg(mul(pow(fn("csc", u), num(2)), du));
+          break;
+        case "sec":
+          result = mul(mul(fn("sec", u), fn("tan", u)), du);
+          break;
+        case "csc":
+          result = neg(mul(mul(fn("csc", u), fn("cot", u)), du));
+          break;
+        case "asinh":
+          result = div(du, fn("sqrt", add(pow(u, num(2)), num(1))));
+          break;
+        case "acosh":
+          result = div(du, fn("sqrt", sub(pow(u, num(2)), num(1))));
+          break;
+        case "atanh":
+          result = div(du, sub(num(1), pow(u, num(2))));
+          break;
+        case "coth":
+          result = neg(mul(pow(fn("csch", u), num(2)), du));
+          break;
+        case "sech":
+          result = neg(mul(mul(fn("sech", u), fn("tanh", u)), du));
+          break;
+        case "csch":
+          result = neg(mul(mul(fn("csch", u), fn("coth", u)), du));
+          break;
+        case "acot":
+          result = neg(div(du, add(num(1), pow(u, num(2)))));
+          break;
+        case "asec":
+          result = div(du, mul(fn("abs", u), fn("sqrt", sub(pow(u, num(2)), num(1)))));
+          break;
+        case "acsc":
+          result = neg(div(du, mul(fn("abs", u), fn("sqrt", sub(pow(u, num(2)), num(1))))));
+          break;
+        case "acoth":
+          result = div(du, sub(num(1), pow(u, num(2))));
+          break;
+        case "asech":
+          result = neg(div(du, mul(u, fn("sqrt", sub(num(1), pow(u, num(2)))))));
+          break;
+        case "acsch":
+          result = neg(div(du, mul(fn("abs", u), fn("sqrt", add(num(1), pow(u, num(2)))))));
+          break;
+        case "abs":
+          result = mul(fn("sign", u), du);
+          break;
+        case "log10":
+          result = div(du, mul(u, fn("ln", num(10))));
+          break;
+        case "log2":
+          result = div(du, mul(u, fn("ln", num(2))));
+          break;
+        case "cbrt":
+          result = div(du, mul(num(3), pow(fn("cbrt", u), num(2))));
+          break;
+        case "floor":
+        case "ceil":
+        case "round":
+        case "sign":
+        case "trunc":
+          result = num(0);
+          break;
+        case "expm1":
+          result = mul(fn("exp", u), du);
+          break;
+        case "log1p":
+          result = div(du, add(num(1), u));
+          break;
+        case "sigmoid":
+          result = mul(mul(fn("sigmoid", u), sub(num(1), fn("sigmoid", u))), du);
+          break;
+        case "erf":
+          result = mul(mul(div(num(2), fn("sqrt", num(Math.PI))), fn("exp", neg(pow(u, num(2))))), du);
+          break;
+        case "relu":
+          result = mul(div(add(num(1), fn("sign", u)), num(2)), du);
+          break;
       }
       break;
     }
@@ -399,6 +581,60 @@ function diff(e: Expr, x: string): Expr {
           return mul(fn("sinh", u), du);
         case "tanh":
           return div(du, pow(fn("cosh", u), num(2)));
+        case "cot":
+          return neg(mul(pow(fn("csc", u), num(2)), du));
+        case "sec":
+          return mul(mul(fn("sec", u), fn("tan", u)), du);
+        case "csc":
+          return neg(mul(mul(fn("csc", u), fn("cot", u)), du));
+        case "asinh":
+          return div(du, fn("sqrt", add(pow(u, num(2)), num(1))));
+        case "acosh":
+          return div(du, fn("sqrt", sub(pow(u, num(2)), num(1))));
+        case "atanh":
+          return div(du, sub(num(1), pow(u, num(2))));
+        case "coth":
+          return neg(mul(pow(fn("csch", u), num(2)), du));
+        case "sech":
+          return neg(mul(mul(fn("sech", u), fn("tanh", u)), du));
+        case "csch":
+          return neg(mul(mul(fn("csch", u), fn("coth", u)), du));
+        case "acot":
+          return neg(div(du, add(num(1), pow(u, num(2)))));
+        case "asec":
+          return div(du, mul(fn("abs", u), fn("sqrt", sub(pow(u, num(2)), num(1)))));
+        case "acsc":
+          return neg(div(du, mul(fn("abs", u), fn("sqrt", sub(pow(u, num(2)), num(1))))));
+        case "acoth":
+          return div(du, sub(num(1), pow(u, num(2))));
+        case "asech":
+          return neg(div(du, mul(u, fn("sqrt", sub(num(1), pow(u, num(2)))))));
+        case "acsch":
+          return neg(div(du, mul(fn("abs", u), fn("sqrt", add(num(1), pow(u, num(2)))))));
+        case "abs":
+          return mul(fn("sign", u), du);
+        case "log10":
+          return div(du, mul(u, fn("ln", num(10))));
+        case "log2":
+          return div(du, mul(u, fn("ln", num(2))));
+        case "cbrt":
+          return div(du, mul(num(3), pow(fn("cbrt", u), num(2))));
+        case "floor":
+        case "ceil":
+        case "round":
+        case "sign":
+        case "trunc":
+          return num(0);
+        case "expm1":
+          return mul(fn("exp", u), du);
+        case "log1p":
+          return div(du, add(num(1), u));
+        case "sigmoid":
+          return mul(mul(fn("sigmoid", u), sub(num(1), fn("sigmoid", u))), du);
+        case "erf":
+          return mul(mul(div(num(2), fn("sqrt", num(Math.PI))), fn("exp", neg(pow(u, num(2))))), du);
+        case "relu":
+          return mul(div(add(num(1), fn("sign", u)), num(2)), du);
       }
     }
   }
@@ -868,12 +1104,86 @@ function evalExpr(e: Expr, env: Record<string, number>): number {
           return Math.cosh(a);
         case "tanh":
           return Math.tanh(a);
+        case "cot":
+          return cotImpl(a);
+        case "sec":
+          return secImpl(a);
+        case "csc":
+          return cscImpl(a);
+        case "asinh":
+          return Math.asinh(a);
+        case "acosh":
+          return Math.acosh(a);
+        case "atanh":
+          return Math.atanh(a);
+        case "coth":
+          return cothImpl(a);
+        case "sech":
+          return sechImpl(a);
+        case "csch":
+          return cschImpl(a);
+        case "acot":
+          return acotImpl(a);
+        case "asec":
+          return asecImpl(a);
+        case "acsc":
+          return acscImpl(a);
+        case "acoth":
+          return acothImpl(a);
+        case "asech":
+          return asechImpl(a);
+        case "acsch":
+          return acschImpl(a);
+        case "abs":
+          return Math.abs(a);
+        case "log10":
+          return Math.log10(a);
+        case "log2":
+          return Math.log2(a);
+        case "cbrt":
+          return Math.cbrt(a);
+        case "floor":
+          return Math.floor(a);
+        case "ceil":
+          return Math.ceil(a);
+        case "round":
+          return Math.round(a);
+        case "sign":
+          return Math.sign(a);
+        case "trunc":
+          return Math.trunc(a);
+        case "expm1":
+          return Math.expm1(a);
+        case "log1p":
+          return Math.log1p(a);
+        case "sigmoid":
+          return sigmoidImpl(a);
+        case "erf":
+          return SpecialFunctions.erf(a);
+        case "relu":
+          return Math.max(a, 0);
       }
     }
   }
 }
 
 // -- compilation --------------------------------------------------------------
+const cotImpl = (x: number): number => 1 / Math.tan(x);
+const secImpl = (x: number): number => 1 / Math.cos(x);
+const cscImpl = (x: number): number => 1 / Math.sin(x);
+const cothImpl = (x: number): number => 1 / Math.tanh(x);
+const sechImpl = (x: number): number => 1 / Math.cosh(x);
+const cschImpl = (x: number): number => 1 / Math.sinh(x);
+// Inverse reciprocal-trig/hyperbolic functions expressed via their reciprocal-argument
+// counterparts (e.g. arcsec(x) = arccos(1/x)) — JS's Math object has no direct equivalents.
+const acotImpl = (x: number): number => Math.PI / 2 - Math.atan(x);
+const asecImpl = (x: number): number => Math.acos(1 / x);
+const acscImpl = (x: number): number => Math.asin(1 / x);
+const acothImpl = (x: number): number => Math.atanh(1 / x);
+const asechImpl = (x: number): number => Math.acosh(1 / x);
+const acschImpl = (x: number): number => Math.asinh(1 / x);
+const sigmoidImpl = (x: number): number => 1 / (1 + Math.exp(-x));
+
 const FUNC_IMPLS: Record<FuncName, (x: number) => number> = {
   sin: Math.sin,
   cos: Math.cos,
@@ -887,6 +1197,35 @@ const FUNC_IMPLS: Record<FuncName, (x: number) => number> = {
   sinh: Math.sinh,
   cosh: Math.cosh,
   tanh: Math.tanh,
+  cot: cotImpl,
+  sec: secImpl,
+  csc: cscImpl,
+  asinh: Math.asinh,
+  acosh: Math.acosh,
+  atanh: Math.atanh,
+  coth: cothImpl,
+  sech: sechImpl,
+  csch: cschImpl,
+  acot: acotImpl,
+  asec: asecImpl,
+  acsc: acscImpl,
+  acoth: acothImpl,
+  asech: asechImpl,
+  acsch: acschImpl,
+  abs: Math.abs,
+  log10: Math.log10,
+  log2: Math.log2,
+  cbrt: Math.cbrt,
+  floor: Math.floor,
+  ceil: Math.ceil,
+  round: Math.round,
+  sign: Math.sign,
+  trunc: Math.trunc,
+  expm1: Math.expm1,
+  log1p: Math.log1p,
+  sigmoid: sigmoidImpl,
+  erf: SpecialFunctions.erf,
+  relu: (x: number) => Math.max(x, 0),
 };
 
 function compileExpr(e: Expr): (env: Record<string, number>) => number {
@@ -975,6 +1314,31 @@ const LATEX_FUNCS: Partial<Record<FuncName, string>> = {
   sinh: "\\sinh",
   cosh: "\\cosh",
   tanh: "\\tanh",
+  cot: "\\cot",
+  sec: "\\sec",
+  csc: "\\csc",
+  coth: "\\coth",
+  // \sech/\csch and arc-hyperbolic names aren't standard LaTeX commands —
+  // render via \operatorname, same convention KaTeX/MathJax use for them.
+  sech: "\\operatorname{sech}",
+  csch: "\\operatorname{csch}",
+  asinh: "\\operatorname{arcsinh}",
+  acosh: "\\operatorname{arccosh}",
+  atanh: "\\operatorname{arctanh}",
+  acot: "\\operatorname{arccot}",
+  asec: "\\operatorname{arcsec}",
+  acsc: "\\operatorname{arccsc}",
+  acoth: "\\operatorname{arccoth}",
+  asech: "\\operatorname{arcsech}",
+  acsch: "\\operatorname{arccsch}",
+  round: "\\operatorname{round}",
+  sign: "\\operatorname{sgn}",
+  trunc: "\\operatorname{trunc}",
+  expm1: "\\operatorname{expm1}",
+  log1p: "\\operatorname{log1p}",
+  sigmoid: "\\operatorname{sigmoid}",
+  erf: "\\operatorname{erf}",
+  relu: "\\operatorname{relu}",
 };
 
 function toLatexRec(e: Expr, parentPrec: number): string {
@@ -987,6 +1351,12 @@ function toLatexRec(e: Expr, parentPrec: number): string {
       return e.name;
     case "func":
       if (e.name === "sqrt") return `\\sqrt{${toLatexRec(e.arg, 0)}}`;
+      if (e.name === "cbrt") return `\\sqrt[3]{${toLatexRec(e.arg, 0)}}`;
+      if (e.name === "abs") return `\\left|${toLatexRec(e.arg, 0)}\\right|`;
+      if (e.name === "floor") return `\\left\\lfloor ${toLatexRec(e.arg, 0)}\\right\\rfloor`;
+      if (e.name === "ceil") return `\\left\\lceil ${toLatexRec(e.arg, 0)}\\right\\rceil`;
+      if (e.name === "log10") return `\\log_{10}\\left(${toLatexRec(e.arg, 0)}\\right)`;
+      if (e.name === "log2") return `\\log_{2}\\left(${toLatexRec(e.arg, 0)}\\right)`;
       return `${LATEX_FUNCS[e.name]}\\left(${toLatexRec(e.arg, 0)}\\right)`;
     case "neg":
       return wrap(`-${toLatexRec(e.arg, PREC.neg)}`, PREC.neg, parentPrec);
@@ -1006,7 +1376,16 @@ function toLatexRec(e: Expr, parentPrec: number): string {
 
 // -- LaTeX parsing (fromLatex) ------------------------------------------------
 const LATEX_FUNC_NAMES: Partial<Record<string, FuncName>> = Object.fromEntries(
-  Object.entries(LATEX_FUNCS).map(([name, latex]) => [latex, name as FuncName]),
+  Object.entries(LATEX_FUNCS)
+    .filter(([, latex]) => !latex.startsWith("\\operatorname"))
+    .map(([name, latex]) => [latex, name as FuncName]),
+);
+
+/** Reverse lookup for the `\operatorname{name}` functions in {@link LATEX_FUNCS} (e.g. `sech` -> `"sech"`). */
+const OPERATORNAME_FUNC_NAMES: Partial<Record<string, FuncName>> = Object.fromEntries(
+  Object.entries(LATEX_FUNCS)
+    .filter((entry): entry is [string, string] => entry[1].startsWith("\\operatorname"))
+    .map(([name, latex]) => [/\\operatorname\{(\w+)\}/.exec(latex)?.[1], name as FuncName]),
 );
 
 /** Find the index of the delimiter matching `open` at `s[start]`, honoring nesting. */
@@ -1088,11 +1467,49 @@ function transformLatex(s: string): string {
           const { content: root, next } = extractGroup(s, i);
           i = next;
           const arg = readGroup();
-          out += `((${transformLatex(arg)})^(1/(${transformLatex(root)})))`;
+          const transformedRoot = transformLatex(root).trim();
+          // \sqrt[3]{...} maps to cbrt(...) rather than a fractional power so
+          // negative arguments evaluate correctly (Math.cbrt(-8) = -2, but
+          // (-8)^(1/3) is NaN under JS's `**`).
+          out +=
+            transformedRoot === "3"
+              ? `cbrt(${transformLatex(arg)})`
+              : `((${transformLatex(arg)})^(1/(${transformedRoot})))`;
         } else {
           const arg = readGroup();
           out += `sqrt(${transformLatex(arg)})`;
         }
+        continue;
+      }
+      if (cmd === "\\log") {
+        let base = "10";
+        if (s[i] === "_" && s[i + 1] === "{") {
+          const { content, next } = extractGroup(s, i + 1);
+          i = next;
+          base = content.trim();
+        }
+        if (base !== "10" && base !== "2") {
+          throw new Error(`Unsupported LaTeX construct: \\log base ${base} (only base 10 and base 2 are supported)`);
+        }
+        const arg = readGroupOrParenOrToken();
+        out += `${base === "2" ? "log2" : "log10"}(${transformLatex(arg)})`;
+        continue;
+      }
+      if (cmd === "\\lfloor" || cmd === "\\lceil") {
+        const closeCmd = cmd === "\\lfloor" ? "\\rfloor" : "\\rceil";
+        const closeIdx = s.indexOf(closeCmd, i);
+        if (closeIdx === -1) throw new Error(`Unmatched '${cmd}' in LaTeX source`);
+        const inner = s.slice(i, closeIdx);
+        i = closeIdx + closeCmd.length;
+        out += `${cmd === "\\lfloor" ? "floor" : "ceil"}(${transformLatex(inner)})`;
+        continue;
+      }
+      if (cmd === "\\operatorname") {
+        const opName = readGroup();
+        const funcName = OPERATORNAME_FUNC_NAMES[opName];
+        if (!funcName) throw new Error(`Unsupported LaTeX construct: \\operatorname{${opName}}`);
+        const arg = readGroupOrParenOrToken();
+        out += `${funcName}(${transformLatex(arg)})`;
         continue;
       }
       const funcName = LATEX_FUNC_NAMES[cmd];
@@ -1102,6 +1519,14 @@ function transformLatex(s: string): string {
         continue;
       }
       throw new Error(`Unsupported LaTeX construct: ${cmd}`);
+    }
+    if (ch === "|") {
+      const closeIdx = s.indexOf("|", i + 1);
+      if (closeIdx === -1) throw new Error("Unmatched '|' in LaTeX source");
+      const inner = s.slice(i + 1, closeIdx);
+      i = closeIdx + 1;
+      out += `abs(${transformLatex(inner)})`;
+      continue;
     }
     if (ch === "^" && s[i + 1] === "{") {
       const { content, next } = extractGroup(s, i + 1);
@@ -1409,6 +1834,13 @@ class Parser {
       this.pos++;
       return e;
     }
+    if (this.peek() === "|") {
+      this.pos++;
+      const e = this.expr();
+      if (this.peek() !== "|") throw new Error("Expected '|'");
+      this.pos++;
+      return fn("abs", e);
+    }
     // number
     const numMatch = /^\d+\.?\d*(?:[eE][+-]?\d+)?/.exec(this.s.slice(this.pos));
     if (numMatch) {
@@ -1420,12 +1852,15 @@ class Parser {
     if (idMatch) {
       const name = idMatch[0];
       this.pos += name.length;
-      if ((FUNCS as string[]).includes(name) && this.peek() === "(") {
+      const canonical: FuncName | undefined = (FUNCS as string[]).includes(name)
+        ? (name as FuncName)
+        : FUNC_ALIASES[name];
+      if (canonical && this.peek() === "(") {
         this.pos++;
         const arg = this.expr();
         if (this.peek() !== ")") throw new Error("Expected ')'");
         this.pos++;
-        return fn(name as FuncName, arg);
+        return fn(canonical, arg);
       }
       if (name === "pi") return num(Math.PI);
       if (name === "e") return num(Math.E);

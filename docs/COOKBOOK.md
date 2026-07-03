@@ -215,8 +215,45 @@ Symbolic.toLatex("x^2/2"); // "\\frac{x^{2}}{2}"
 
 // fromLatex is the reverse of toLatex, for LaTeX-emitting math-field input:
 Symbolic.toString(Symbolic.fromLatex("\\frac{x^{2}}{2}")); // "x^2/2"
-Symbolic.toString(Symbolic.fromLatex("\\sqrt[3]{x}")); // "x^(1/3)"
+Symbolic.toString(Symbolic.fromLatex("\\sqrt[3]{x}")); // "cbrt(x)" — not a fractional power,
+// since Math.cbrt(-8) = -2 but (-8)^(1/3) is NaN under JS's `**`.
+Symbolic.toString(Symbolic.fromLatex("\\sqrt[5]{x}")); // "x^(1/5)" — any other root stays a fractional power
+
+// arcsin/arccos/arctan/arcsinh/arccosh/arctanh are accepted as aliases for
+// asin/acos/atan/asinh/acosh/atanh — both spellings parse identically:
+Symbolic.toString(Symbolic.parse("arctan(x)")); // "atan(x)"
+Symbolic.toString(Symbolic.parse("logistic(x)")); // "sigmoid(x)" — logistic is an alias for sigmoid
+
+// |x| bar notation and \lfloor/\lceil round-trip too:
+Symbolic.toLatex("abs(x)"); // "\\left|x\\right|"
+Symbolic.toString(Symbolic.fromLatex("\\left\\lfloor x\\right\\rfloor")); // "floor(x)"
+Symbolic.evaluate(Symbolic.fromLatex("\\log_{2}(x)"), { x: 8 }); // 3 — \log defaults to base 10, or reads a subscript
+
+// Functions with no standard bare LaTeX command (sech, csch, arcsinh, arccosh,
+// arctanh, and the newer inverse-reciprocal/programmatic functions below)
+// round-trip through \operatorname{...}, matching KaTeX/MathJax:
+Symbolic.toLatex("sech(x)"); // "\\operatorname{sech}\\left(x\\right)"
+Symbolic.toString(Symbolic.fromLatex("\\operatorname{sech}(x)")); // "sech(x)"
 ```
+
+`Symbolic.parse` recognizes 41 elementary functions:
+
+- `sin/cos/tan`, `asin/acos/atan` (+ `arcsin/arccos/arctan` aliases)
+- `sinh/cosh/tanh`, `asinh/acosh/atanh` (+ `arcsinh/arccosh/arctanh` aliases)
+- reciprocal-trig `cot/sec/csc` and reciprocal-hyperbolic `coth/sech/csch`
+- inverse-reciprocal-trig `acot/asec/acsc` (+ `arccot/arcsec/arccsc` aliases)
+  and inverse-reciprocal-hyperbolic `acoth/asech/acsch` (+ `arccoth/arcsech/arccsch` aliases)
+- `exp/ln/sqrt/cbrt/log10/log2`
+- `abs` (also via `|x|` bar syntax), `floor/ceil/round/trunc/sign` (+ `sgn` alias)
+- `expm1/log1p` (precision-preserving `e^x - 1` / `ln(1+x)`) and
+  `sigmoid` (+ `logistic` alias), `erf`, `relu` — common in numerical/ML code
+
+`FUNCTION_NAMES` (exported alongside `Symbolic`) lists every recognized name —
+canonical and alias — for consumers that need to know what counts as a known
+function identifier without hand-duplicating this list (e.g. a UI's
+implicit-multiplication preprocessor deciding whether `arctan` is one
+identifier or four). Every one of these differentiates, evaluates, compiles,
+and round-trips through `toLatex`/`fromLatex`.
 
 Integration covers the elementary rules (power rule, `1/x`, linear-substitution
 `sin`/`cos`/`exp`, integration by parts for a polynomial times `sin`/`cos`/`exp`,
