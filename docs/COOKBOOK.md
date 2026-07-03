@@ -234,9 +234,25 @@ Symbolic.evaluate(Symbolic.fromLatex("\\log_{2}(x)"), { x: 8 }); // 3 — \log d
 // round-trip through \operatorname{...}, matching KaTeX/MathJax:
 Symbolic.toLatex("sech(x)"); // "\\operatorname{sech}\\left(x\\right)"
 Symbolic.toString(Symbolic.fromLatex("\\operatorname{sech}(x)")); // "sech(x)"
+
+// N-ary functions (atan2/hypot/min/max/gcd/lcm) fold pairwise into nested
+// binary call2 nodes, so N >= 2 arguments all work:
+Symbolic.evaluate("hypot(3,4)", {}); // 5
+Symbolic.evaluate("min(3,7,-2,5)", {}); // -2
+Symbolic.evaluate("atan2(1,1)", {}); // 0.7853981633974483
+
+// log(base, x) and clamp(x, lo, hi) desugar into existing constructs at parse
+// time — they're not their own Expr node type:
+Symbolic.evaluate("log(2,8)", {}); // 3 — desugars to ln(x)/ln(base)
+Symbolic.evaluate("clamp(15,0,10)", {}); // 10 — desugars to min(max(x,lo),hi)
+
+// min/max/gcd round-trip through standard LaTeX commands; atan2/hypot/lcm
+// (no standard command) use \operatorname{...}, same as sech/csch above:
+Symbolic.toLatex("min(x,y)"); // "\\min\\left(x, y\\right)"
+Symbolic.toLatex("atan2(y,x)"); // "\\operatorname{atan2}\\left(y, x\\right)"
 ```
 
-`Symbolic.parse` recognizes 41 elementary functions:
+`Symbolic.parse` recognizes 41 unary elementary functions:
 
 - `sin/cos/tan`, `asin/acos/atan` (+ `arcsin/arccos/arctan` aliases)
 - `sinh/cosh/tanh`, `asinh/acosh/atanh` (+ `arcsinh/arccosh/arctanh` aliases)
@@ -247,6 +263,19 @@ Symbolic.toString(Symbolic.fromLatex("\\operatorname{sech}(x)")); // "sech(x)"
 - `abs` (also via `|x|` bar syntax), `floor/ceil/round/trunc/sign` (+ `sgn` alias)
 - `expm1/log1p` (precision-preserving `e^x - 1` / `ln(1+x)`) and
   `sigmoid` (+ `logistic` alias), `erf`, `relu` — common in numerical/ML code
+
+Plus six N-ary `BinaryFuncName`s (user-facing arity N >= 2, pairwise-folded
+into nested binary `call2` nodes at parse time; `atan2` alone requires exactly
+2 arguments) and two functions that desugar entirely into existing constructs:
+
+- `atan2(y, x)`, `hypot(x1, x2, ...)` — differentiate via the multivariate
+  chain rule
+- `min(a, b, ...)`, `max(a, b, ...)` — differentiate via a `sign`-based
+  formula, correct on both sides of the kink
+- `gcd(a, b, ...)`, `lcm(a, b, ...)` — integer-valued, derivative is `0`
+  (same convention as `floor`/`ceil`/`round`/`sign`/`trunc`)
+- `log(base, x)` desugars to `ln(x)/ln(base)`; `clamp(x, lo, hi)` desugars to
+  `min(max(x, lo), hi)` — neither is its own `Expr` node type
 
 `FUNCTION_NAMES` (exported alongside `Symbolic`) lists every recognized name —
 canonical and alias — for consumers that need to know what counts as a known

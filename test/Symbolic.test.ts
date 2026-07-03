@@ -314,6 +314,93 @@ test("toLatex/fromLatex round-trip abs/floor/ceil/log10/log2/cbrt and the new op
   }
 });
 
+test("evaluates atan2/hypot/min/max/gcd/lcm, including N-ary folding for hypot/min/max/gcd/lcm", () => {
+  assert.ok(Math.abs(Symbolic.evaluate("atan2(1,1)") - Math.atan2(1, 1)) < 1e-12);
+  assert.ok(Math.abs(Symbolic.evaluate("atan2(-1,1)") - Math.atan2(-1, 1)) < 1e-12);
+  assert.equal(Symbolic.evaluate("hypot(3,4)"), 5);
+  assert.equal(Symbolic.evaluate("hypot(3,4,12)"), 13);
+  assert.equal(Symbolic.evaluate("min(3,7)"), 3);
+  assert.equal(Symbolic.evaluate("min(3,7,-2,5)"), -2);
+  assert.equal(Symbolic.evaluate("max(3,7)"), 7);
+  assert.equal(Symbolic.evaluate("max(3,7,-2,5)"), 7);
+  assert.equal(Symbolic.evaluate("gcd(12,18)"), 6);
+  assert.equal(Symbolic.evaluate("gcd(12,18,30)"), 6);
+  assert.equal(Symbolic.evaluate("lcm(4,6)"), 12);
+  assert.equal(Symbolic.evaluate("lcm(4,6,10)"), 60);
+
+  assert.equal(
+    JSON.stringify(Symbolic.parse("min(a,b,c,d)")),
+    JSON.stringify(Symbolic.parse("min(min(min(a,b),c),d)")),
+    "N-ary min folds pairwise, left to right",
+  );
+});
+
+test("log(base, x) and clamp(x, lo, hi) desugar at parse time", () => {
+  assert.equal(Symbolic.evaluate("log(2,8)"), 3);
+  assert.equal(Symbolic.evaluate("log(10,100)"), 2);
+  assert.equal(Symbolic.evaluate("clamp(5,0,10)"), 5);
+  assert.equal(Symbolic.evaluate("clamp(-5,0,10)"), 0);
+  assert.equal(Symbolic.evaluate("clamp(15,0,10)"), 10);
+  assert.throws(() => Symbolic.parse("log(x)"), "log requires exactly 2 arguments");
+  assert.throws(() => Symbolic.parse("clamp(x,0)"), "clamp requires exactly 3 arguments");
+});
+
+test("atan2 requires exactly 2 arguments; hypot/min/max/gcd/lcm require at least 2", () => {
+  assert.throws(() => Symbolic.parse("atan2(x)"));
+  assert.throws(() => Symbolic.parse("atan2(x,y,z)"));
+  for (const name of ["hypot", "min", "max", "gcd", "lcm"]) {
+    assert.throws(() => Symbolic.parse(`${name}(x)`), `${name} requires >= 2 arguments`);
+  }
+});
+
+test("differentiates atan2/hypot/min/max via the multivariate chain rule; gcd/lcm are 0", () => {
+  const numDeriv = (f: (x: number) => number, x0: number, h = 1e-6) => (f(x0 + h) - f(x0 - h)) / (2 * h);
+
+  for (const [expr, at] of [
+    ["atan2(x,3)", 2],
+    ["atan2(3,x)", 2],
+    ["hypot(x,4)", 3],
+    ["min(x,5)", 2],
+    ["min(x,5)", 8],
+    ["max(x,5)", 2],
+    ["max(x,5)", 8],
+  ] as const) {
+    const symbolic = Symbolic.evaluate(Symbolic.differentiate(expr), { x: at });
+    const numeric = numDeriv((x) => Symbolic.evaluate(expr, { x }), at);
+    assert.ok(Math.abs(symbolic - numeric) < 1e-4, `d/dx ${expr} at x=${at}: ${symbolic} vs ${numeric}`);
+  }
+
+  assert.equal(Symbolic.evaluate(Symbolic.differentiate("gcd(x,6)"), { x: 10 }), 0);
+  assert.equal(Symbolic.evaluate(Symbolic.differentiate("lcm(x,6)"), { x: 10 }), 0);
+});
+
+test("simplify constant-folds call2 nodes; substitute/expand recurse into them", () => {
+  assert.equal(
+    Symbolic.toString(Symbolic.simplify("min(3,7) + max(2,9) + gcd(12,18) + lcm(4,6) + hypot(3,4)")),
+    `${3 + 9 + 6 + 12 + 5}`,
+  );
+  assert.equal(Symbolic.toString(Symbolic.substitute("hypot(x,y)", "x", "3")), "hypot(3, y)");
+  assert.equal(
+    Symbolic.toString(Symbolic.expand("hypot((x+1),y)")),
+    Symbolic.toString(Symbolic.parse("hypot(x + 1, y)")),
+  );
+});
+
+test("toLatex/fromLatex round-trip atan2/hypot/min/max/gcd/lcm", () => {
+  const expectedLatex: [string, string][] = [
+    ["atan2(x,y)", "\\operatorname{atan2}\\left(x, y\\right)"],
+    ["hypot(x,y)", "\\operatorname{hypot}\\left(x, y\\right)"],
+    ["min(x,y)", "\\min\\left(x, y\\right)"],
+    ["max(x,y)", "\\max\\left(x, y\\right)"],
+    ["gcd(x,y)", "\\gcd\\left(x, y\\right)"],
+    ["lcm(x,y)", "\\operatorname{lcm}\\left(x, y\\right)"],
+  ];
+  for (const [expr, latex] of expectedLatex) {
+    assert.equal(Symbolic.toLatex(expr), latex, expr);
+    assert.equal(JSON.stringify(Symbolic.fromLatex(latex)), JSON.stringify(Symbolic.parse(expr)), `round-trip ${expr}`);
+  }
+});
+
 test("integrate by parts", () => {
   // ∫ x sin(x) dx = sin(x) - x cos(x)
   const F = Symbolic.integrate("x*sin(x)");

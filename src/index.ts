@@ -70,6 +70,7 @@ export { StringEvaluator } from "./StringEvaluator.ts";
 // Algebraic structures & geometry
 export { Structure, type StructureOptions } from "./Structure.ts";
 export {
+  type BinaryFuncName,
   type DifferentiationStep,
   type Expr,
   FUNCTION_NAMES,

@@ -50,6 +50,9 @@ export type FuncName =
   | "erf"
   | "relu";
 
+/** Elementary functions that take exactly two `Expr` operands (see the `call2` `Expr` variant). */
+export type BinaryFuncName = "atan2" | "hypot" | "min" | "max" | "gcd" | "lcm";
+
 export type Expr =
   | { type: "const"; value: number }
   | { type: "var"; name: string }
@@ -59,7 +62,8 @@ export type Expr =
   | { type: "div"; left: Expr; right: Expr }
   | { type: "pow"; base: Expr; exp: Expr }
   | { type: "neg"; arg: Expr }
-  | { type: "func"; name: FuncName; arg: Expr };
+  | { type: "func"; name: FuncName; arg: Expr }
+  | { type: "call2"; name: BinaryFuncName; left: Expr; right: Expr };
 
 const FUNCS: FuncName[] = [
   "sin",
@@ -106,6 +110,15 @@ const FUNCS: FuncName[] = [
 ];
 
 /**
+ * `BinaryFuncName`s recognized by {@link Symbolic.parse}. `hypot`/`min`/`max`/
+ * `gcd`/`lcm` accept N ≥ 2 user-facing arguments, pairwise-folded into nested
+ * `call2` nodes at parse time; `atan2` takes exactly 2. `log(base, x)` and
+ * `clamp(x, lo, hi)` are also multi-arg but desugar entirely into existing
+ * constructs at parse time rather than becoming `call2` nodes.
+ */
+const BINARY_FUNCS: BinaryFuncName[] = ["atan2", "hypot", "min", "max", "gcd", "lcm"];
+
+/**
  * Alternate plain-text spellings accepted by {@link Symbolic.parse}, mapped to
  * their canonical `FuncName` — e.g. `arcsin(x)` parses identically to
  * `asin(x)`.
@@ -133,7 +146,13 @@ const FUNC_ALIASES: Record<string, FuncName> = {
  * multiplication preprocessor) that need to know what counts as a known
  * identifier without hand-duplicating this list.
  */
-export const FUNCTION_NAMES: readonly string[] = [...FUNCS, ...Object.keys(FUNC_ALIASES)];
+export const FUNCTION_NAMES: readonly string[] = [
+  ...FUNCS,
+  ...Object.keys(FUNC_ALIASES),
+  ...BINARY_FUNCS,
+  "log",
+  "clamp",
+];
 
 // -- constructors -----------------------------------------------------------
 const num = (value: number): Expr => ({ type: "const", value });
@@ -145,6 +164,7 @@ const div = (left: Expr, right: Expr): Expr => ({ type: "div", left, right });
 const pow = (base: Expr, exp: Expr): Expr => ({ type: "pow", base, exp });
 const neg = (arg: Expr): Expr => ({ type: "neg", arg });
 const fn = (name: FuncName, arg: Expr): Expr => ({ type: "func", name, arg });
+const call2 = (name: BinaryFuncName, left: Expr, right: Expr): Expr => ({ type: "call2", name, left, right });
 
 const isConst = (e: Expr, value?: number): boolean => e.type === "const" && (value === undefined || e.value === value);
 const containsVar = (e: Expr, name: string): boolean => {
@@ -278,9 +298,11 @@ export class Symbolic {
    * `\sqrt[3]{a}` (as `cbrt`) / `\sqrt[n]{a}`, `\left(...\right)`,
    * `\left|...\right|` (absolute value), `\left\lfloor...\right\rfloor` /
    * `\left\lceil...\right\rceil`, `\log_{10}`/`\log_{2}`, `\cdot`/`\times`,
-   * `\pi`, `^{...}` exponents, `_{...}` subscripts, and the named function
-   * commands (`\sin`, `\arcsin`, `\sinh`, `\operatorname{sech}`, ...). Spacing
-   * commands (`\,`, `\;`, `\!`, `\quad`) are ignored.
+   * `\pi`, `^{...}` exponents, `_{...}` subscripts, the named unary function
+   * commands (`\sin`, `\arcsin`, `\sinh`, `\operatorname{sech}`, ...), and the
+   * two-argument `BinaryFuncName` commands (`\min`, `\max`, `\gcd`,
+   * `\operatorname{atan2}`, `\operatorname{hypot}`, `\operatorname{lcm}`).
+   * Spacing commands (`\,`, `\;`, `\!`, `\quad`) are ignored.
    *
    * @throws on LaTeX constructs with no `Expr` equivalent, e.g. `\int` or `\sum`.
    */
@@ -524,6 +546,32 @@ function diffTraced(e: Expr, x: string, steps: DifferentiationStep[]): Expr {
       }
       break;
     }
+    case "call2": {
+      rule = `Multivariable Chain Rule (${e.name})`;
+      const l = e.left;
+      const r = e.right;
+      const dl = diffTraced(l, x, steps);
+      const dr = diffTraced(r, x, steps);
+      switch (e.name) {
+        case "atan2":
+          result = div(sub(mul(r, dl), mul(l, dr)), add(pow(l, num(2)), pow(r, num(2))));
+          break;
+        case "hypot":
+          result = div(add(mul(l, dl), mul(r, dr)), call2("hypot", l, r));
+          break;
+        case "min":
+          result = sub(div(add(dl, dr), num(2)), mul(fn("sign", sub(l, r)), div(sub(dl, dr), num(2))));
+          break;
+        case "max":
+          result = add(div(add(dl, dr), num(2)), mul(fn("sign", sub(l, r)), div(sub(dl, dr), num(2))));
+          break;
+        case "gcd":
+        case "lcm":
+          result = num(0);
+          break;
+      }
+      break;
+    }
   }
   steps.push({ rule, input: e, output: result });
   return result;
@@ -556,7 +604,8 @@ function diff(e: Expr, x: string): Expr {
     case "func": {
       const u = e.arg;
       const du = diff(u, x);
-      switch (e.name) {
+      const name = e.name;
+      switch (name) {
         case "sin":
           return mul(fn("cos", u), du);
         case "cos":
@@ -636,6 +685,26 @@ function diff(e: Expr, x: string): Expr {
         case "relu":
           return mul(div(add(num(1), fn("sign", u)), num(2)), du);
       }
+      throw new Error(`Unhandled function: ${name}`);
+    }
+    case "call2": {
+      const l = e.left;
+      const r = e.right;
+      const dl = diff(l, x);
+      const dr = diff(r, x);
+      switch (e.name) {
+        case "atan2":
+          return div(sub(mul(r, dl), mul(l, dr)), add(pow(l, num(2)), pow(r, num(2))));
+        case "hypot":
+          return div(add(mul(l, dl), mul(r, dr)), call2("hypot", l, r));
+        case "min":
+          return sub(div(add(dl, dr), num(2)), mul(fn("sign", sub(l, r)), div(sub(dl, dr), num(2))));
+        case "max":
+          return add(div(add(dl, dr), num(2)), mul(fn("sign", sub(l, r)), div(sub(dl, dr), num(2))));
+        case "gcd":
+        case "lcm":
+          return num(0);
+      }
     }
   }
 }
@@ -650,6 +719,12 @@ function simplifyOnce(e: Expr): Expr {
     return neg(a);
   }
   if (e.type === "func") return fn(e.name, simplifyOnce(e.arg));
+  if (e.type === "call2") {
+    const l = simplifyOnce(e.left);
+    const r = simplifyOnce(e.right);
+    if (l.type === "const" && r.type === "const") return num(BINARY_FUNC_IMPLS[e.name](l.value, r.value));
+    return call2(e.name, l, r);
+  }
   if (e.type === "pow") {
     const b = simplifyOnce(e.base);
     const p = simplifyOnce(e.exp);
@@ -702,6 +777,10 @@ function equal(a: Expr, b: Expr): boolean {
       return equal(a.arg, (b as typeof a).arg);
     case "func":
       return a.name === (b as typeof a).name && equal(a.arg, (b as typeof a).arg);
+    case "call2":
+      return (
+        a.name === (b as typeof a).name && equal(a.left, (b as typeof a).left) && equal(a.right, (b as typeof a).right)
+      );
     case "pow":
       return equal(a.base, (b as typeof a).base) && equal(a.exp, (b as typeof a).exp);
     default:
@@ -720,6 +799,8 @@ function subst(e: Expr, name: string, r: Expr): Expr {
       return neg(subst(e.arg, name, r));
     case "func":
       return fn(e.name, subst(e.arg, name, r));
+    case "call2":
+      return call2(e.name, subst(e.left, name, r), subst(e.right, name, r));
     case "pow":
       return pow(subst(e.base, name, r), subst(e.exp, name, r));
     case "add":
@@ -745,6 +826,8 @@ function expandOnce(e: Expr): Expr {
       return neg(expandOnce(e.arg));
     case "func":
       return fn(e.name, expandOnce(e.arg));
+    case "call2":
+      return call2(e.name, expandOnce(e.left), expandOnce(e.right));
     case "add":
       return add(expandOnce(e.left), expandOnce(e.right));
     case "sub":
@@ -804,6 +887,8 @@ function collectLikeTerms(e: Expr): Expr {
       return e;
     case "func":
       return fn(e.name, collectLikeTerms(e.arg));
+    case "call2":
+      return call2(e.name, collectLikeTerms(e.left), collectLikeTerms(e.right));
     case "div":
       return div(collectLikeTerms(e.left), collectLikeTerms(e.right));
     case "pow":
@@ -1079,7 +1164,8 @@ function evalExpr(e: Expr, env: Record<string, number>): number {
       return -evalExpr(e.arg, env);
     case "func": {
       const a = evalExpr(e.arg, env);
-      switch (e.name) {
+      const name = e.name;
+      switch (name) {
         case "sin":
           return Math.sin(a);
         case "cos":
@@ -1163,7 +1249,10 @@ function evalExpr(e: Expr, env: Record<string, number>): number {
         case "relu":
           return Math.max(a, 0);
       }
+      throw new Error(`Unhandled function: ${name}`);
     }
+    case "call2":
+      return BINARY_FUNC_IMPLS[e.name](evalExpr(e.left, env), evalExpr(e.right, env));
   }
 }
 
@@ -1228,6 +1317,15 @@ const FUNC_IMPLS: Record<FuncName, (x: number) => number> = {
   relu: (x: number) => Math.max(x, 0),
 };
 
+const BINARY_FUNC_IMPLS: Record<BinaryFuncName, (a: number, b: number) => number> = {
+  atan2: Math.atan2,
+  hypot: Math.hypot,
+  min: Math.min,
+  max: Math.max,
+  gcd: intGcd,
+  lcm: (a, b) => Math.abs(a * b) / intGcd(a, b),
+};
+
 function compileExpr(e: Expr): (env: Record<string, number>) => number {
   switch (e.type) {
     case "const": {
@@ -1272,6 +1370,12 @@ function compileExpr(e: Expr): (env: Record<string, number>) => number {
       const impl = FUNC_IMPLS[e.name];
       return (env) => impl(a(env));
     }
+    case "call2": {
+      const l = compileExpr(e.left);
+      const r = compileExpr(e.right);
+      const impl = BINARY_FUNC_IMPLS[e.name];
+      return (env) => impl(l(env), r(env));
+    }
   }
 }
 
@@ -1285,6 +1389,8 @@ function render(e: Expr, parentPrec: number): string {
       return e.name;
     case "func":
       return `${e.name}(${render(e.arg, 0)})`;
+    case "call2":
+      return `${e.name}(${render(e.left, 0)}, ${render(e.right, 0)})`;
     case "neg":
       return wrap(`-${render(e.arg, PREC.neg)}`, PREC.neg, parentPrec);
     case "pow":
@@ -1341,6 +1447,16 @@ const LATEX_FUNCS: Partial<Record<FuncName, string>> = {
   relu: "\\operatorname{relu}",
 };
 
+/** LaTeX commands for `BinaryFuncName`s — `\min`/`\max`/`\gcd` are standard LaTeX; the rest use `\operatorname`. */
+const LATEX_BINARY_FUNCS: Record<BinaryFuncName, string> = {
+  atan2: "\\operatorname{atan2}",
+  hypot: "\\operatorname{hypot}",
+  min: "\\min",
+  max: "\\max",
+  gcd: "\\gcd",
+  lcm: "\\operatorname{lcm}",
+};
+
 function toLatexRec(e: Expr, parentPrec: number): string {
   switch (e.type) {
     case "const":
@@ -1358,6 +1474,8 @@ function toLatexRec(e: Expr, parentPrec: number): string {
       if (e.name === "log10") return `\\log_{10}\\left(${toLatexRec(e.arg, 0)}\\right)`;
       if (e.name === "log2") return `\\log_{2}\\left(${toLatexRec(e.arg, 0)}\\right)`;
       return `${LATEX_FUNCS[e.name]}\\left(${toLatexRec(e.arg, 0)}\\right)`;
+    case "call2":
+      return `${LATEX_BINARY_FUNCS[e.name]}\\left(${toLatexRec(e.left, 0)}, ${toLatexRec(e.right, 0)}\\right)`;
     case "neg":
       return wrap(`-${toLatexRec(e.arg, PREC.neg)}`, PREC.neg, parentPrec);
     case "pow":
@@ -1388,6 +1506,20 @@ const OPERATORNAME_FUNC_NAMES: Partial<Record<string, FuncName>> = Object.fromEn
     .map(([name, latex]) => [/\\operatorname\{(\w+)\}/.exec(latex)?.[1], name as FuncName]),
 );
 
+/** Reverse lookup for the standard-LaTeX-command `BinaryFuncName`s (`\min`, `\max`, `\gcd`). */
+const LATEX_BINARY_FUNC_NAMES: Partial<Record<string, BinaryFuncName>> = Object.fromEntries(
+  Object.entries(LATEX_BINARY_FUNCS)
+    .filter((entry): entry is [BinaryFuncName, string] => !entry[1].startsWith("\\operatorname"))
+    .map(([name, latex]) => [latex, name as BinaryFuncName]),
+);
+
+/** Reverse lookup for the `\operatorname{name}` `BinaryFuncName`s (`atan2`, `hypot`, `lcm`). */
+const OPERATORNAME_BINARY_FUNC_NAMES: Partial<Record<string, BinaryFuncName>> = Object.fromEntries(
+  Object.entries(LATEX_BINARY_FUNCS)
+    .filter((entry): entry is [BinaryFuncName, string] => entry[1].startsWith("\\operatorname"))
+    .map(([name, latex]) => [/\\operatorname\{(\w+)\}/.exec(latex)?.[1], name as BinaryFuncName]),
+);
+
 /** Find the index of the delimiter matching `open` at `s[start]`, honoring nesting. */
 function findGroupEnd(s: string, start: number, open: string, close: string): number {
   let depth = 0;
@@ -1408,6 +1540,24 @@ function extractGroup(s: string, pos: number): { content: string; next: number }
   if (!close) throw new Error(`Expected a group starting with '{', '(' or '[' at position ${pos}`);
   const end = findGroupEnd(s, pos, open, close);
   return { content: s.slice(pos + 1, end), next: end + 1 };
+}
+
+/** Split `s` on top-level commas, ignoring commas nested inside `{}`/`()`/`[]`. */
+function splitTopLevelCommas(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === "{" || ch === "(" || ch === "[") depth++;
+    else if (ch === "}" || ch === ")" || ch === "]") depth--;
+    else if (ch === "," && depth === 0) {
+      parts.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.slice(start));
+  return parts;
 }
 
 /** Convert a LaTeX math string into the plain-infix syntax `Symbolic.parse`'s `Parser` understands. */
@@ -1439,6 +1589,17 @@ function transformLatex(s: string): string {
       return m[0];
     }
     throw new Error(`Expected an argument at position ${i} in LaTeX source: ${s}`);
+  };
+
+  /** Read a `(...)`/`{...}` group holding exactly 2 comma-separated arguments, for `call2` functions. */
+  const readArgPair = (): [string, string] => {
+    if (s[i] !== "(" && s[i] !== "{") throw new Error(`Expected '(' at position ${i} in LaTeX source: ${s}`);
+    const { content, next } = extractGroup(s, i);
+    i = next;
+    const parts = splitTopLevelCommas(content);
+    if (parts.length !== 2)
+      throw new Error(`Expected 2 comma-separated arguments at position ${i} in LaTeX source: ${s}`);
+    return [parts[0], parts[1]];
   };
 
   while (i < s.length) {
@@ -1506,10 +1667,22 @@ function transformLatex(s: string): string {
       }
       if (cmd === "\\operatorname") {
         const opName = readGroup();
+        const binaryName = OPERATORNAME_BINARY_FUNC_NAMES[opName];
+        if (binaryName) {
+          const [left, right] = readArgPair();
+          out += `${binaryName}(${transformLatex(left)}, ${transformLatex(right)})`;
+          continue;
+        }
         const funcName = OPERATORNAME_FUNC_NAMES[opName];
         if (!funcName) throw new Error(`Unsupported LaTeX construct: \\operatorname{${opName}}`);
         const arg = readGroupOrParenOrToken();
         out += `${funcName}(${transformLatex(arg)})`;
+        continue;
+      }
+      const binaryFuncName = LATEX_BINARY_FUNC_NAMES[cmd];
+      if (binaryFuncName) {
+        const [left, right] = readArgPair();
+        out += `${binaryFuncName}(${transformLatex(left)}, ${transformLatex(right)})`;
         continue;
       }
       const funcName = LATEX_FUNC_NAMES[cmd];
@@ -1793,6 +1966,16 @@ class Parser {
     return this.s[this.pos] ?? "";
   }
 
+  /** Parse a comma-separated list of expressions, for multi-arg function calls. */
+  private argList(): Expr[] {
+    const args = [this.expr()];
+    while (this.peek() === ",") {
+      this.pos++;
+      args.push(this.expr());
+    }
+    return args;
+  }
+
   private expr(): Expr {
     let left = this.term();
     while (this.peek() === "+" || this.peek() === "-") {
@@ -1852,6 +2035,31 @@ class Parser {
     if (idMatch) {
       const name = idMatch[0];
       this.pos += name.length;
+      if ((name === "log" || name === "clamp") && this.peek() === "(") {
+        this.pos++;
+        const args = this.argList();
+        if (this.peek() !== ")") throw new Error("Expected ')'");
+        this.pos++;
+        if (name === "log") {
+          if (args.length !== 2) throw new Error(`log() expects 2 arguments (base, x), got ${args.length}`);
+          return div(fn("ln", args[1]), fn("ln", args[0]));
+        }
+        if (args.length !== 3) throw new Error(`clamp() expects 3 arguments (x, lo, hi), got ${args.length}`);
+        return call2("min", call2("max", args[0], args[1]), args[2]);
+      }
+      if ((BINARY_FUNCS as string[]).includes(name) && this.peek() === "(") {
+        const binaryName = name as BinaryFuncName;
+        this.pos++;
+        const args = this.argList();
+        if (this.peek() !== ")") throw new Error("Expected ')'");
+        this.pos++;
+        if (binaryName === "atan2") {
+          if (args.length !== 2) throw new Error(`atan2() expects exactly 2 arguments, got ${args.length}`);
+          return call2("atan2", args[0], args[1]);
+        }
+        if (args.length < 2) throw new Error(`${binaryName}() expects at least 2 arguments, got ${args.length}`);
+        return args.reduce((l, r) => call2(binaryName, l, r));
+      }
       const canonical: FuncName | undefined = (FUNCS as string[]).includes(name)
         ? (name as FuncName)
         : FUNC_ALIASES[name];
